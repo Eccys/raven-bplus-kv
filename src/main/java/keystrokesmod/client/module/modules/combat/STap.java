@@ -83,14 +83,18 @@ public class STap extends Module {
     }
 
     public void sTap() {
-        if (state != StapState.NONE)
+        if (state != StapState.NONE || mc.thePlayer == null || target == null)
             return;
-        if (!(Math.random() <= chance.getInput() / 100)) {
-            hits++;
+        hits++;
+        if (rhit < 1) {
+            int easports = Math.max(1, (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1));
+            rhit = ThreadLocalRandom.current().nextInt(easports) + (int) hitPer.getInputMin();
         }
         if (mc.thePlayer.getDistanceToEntity(target) > range.getInput()
                 || (onlyPlayers.isToggled() && !(target instanceof EntityPlayer))
-                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword()) || !(rhit >= hits))
+                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword())
+                || hits < rhit
+                || !(Math.random() <= chance.getInput() / 100.0))
             return;
         trystartCombo();
     }
@@ -99,8 +103,8 @@ public class STap extends Module {
         state = StapState.NONE;
         KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), false);
         hits = 0;
-        int easports = (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1);
-        rhit = ThreadLocalRandom.current().nextInt((easports));
+        int easports = Math.max(1, (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1));
+        rhit = ThreadLocalRandom.current().nextInt(easports);
         rhit += (int) hitPer.getInputMin();
     }
 

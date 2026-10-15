@@ -33,6 +33,7 @@ public class Tracers extends Module {
         this.registerSetting(rgb = new RGBSetting("Color:", 255, 100, 0));
         this.registerSetting(e = new TickSetting("Rainbow", false));
         this.registerSetting(o = new TickSetting("Redshift w distance", false));
+        this.rgb_c = rgb.getRGB();
     }
 
     @Override
@@ -63,6 +64,7 @@ public class Tracers extends Module {
     public void onForgeEvent(ForgeEvent fe) {
         if (fe.getEvent() instanceof RenderWorldLastEvent)
             if (Utils.Player.isPlayerInGame()) {
+                this.rgb_c = rgb.getRGB();
                 int rgb = e.isToggled() ? Utils.Client.rainbowDraw(2L, 0L) : this.rgb_c;
                 Iterator<EntityPlayer> var3 = mc.theWorld.playerEntities.iterator();
 
@@ -79,11 +81,10 @@ public class Tracers extends Module {
                         while (en.deathTime != 0);
                     while (!a.isToggled() && en.isInvisible());
 
-                    if (!AntiBot.bot(en))
+                    if (!AntiBot.bot(en) && mc.thePlayer.getDistanceToEntity(en) <= sl.getInput())
                         if (o.isToggled() && (mc.thePlayer.getDistanceToEntity(en) < 25)) {
-                            // ik i can use a lot of tenary statements but my brain
-                            int red = (int) (Math.abs(mc.thePlayer.getDistanceToEntity(en) - 25) * 10);
-                            int green = Math.abs(red - 255);
+                            int red = Math.min(255, Math.max(0, (int) (Math.abs(mc.thePlayer.getDistanceToEntity(en) - 25) * 10)));
+                            int green = Math.min(255, Math.max(0, 255 - red));
                             int rgbs = new Color(red, green, this.rgb.getBlue()).getRGB();
                             Utils.HUD.dtl(en, rgbs, (float) f.getInput());
                         } else

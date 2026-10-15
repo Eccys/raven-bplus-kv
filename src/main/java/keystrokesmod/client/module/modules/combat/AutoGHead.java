@@ -29,18 +29,29 @@ public class AutoGHead extends Module {
 
     }
 
+    @Override
+    public void onDisable() {
+        if (Utils.Player.isPlayerInGame() && (state == State.SWITCHED || state == State.SWITCHEDANDCLICKED)) {
+            mc.thePlayer.inventory.currentItem = originalSlot;
+        }
+        state = State.WAITINGTOSWITCH;
+    }
+
     @Subscribe
     public void update(UpdateEvent e) {
         if(!Utils.Player.isPlayerInGame())
             return;
-        if((mc.thePlayer.getHealth() < health.getInput()) && cd.hasFinished()) {
+        if(((mc.thePlayer.getHealth() < health.getInput()) || state != State.WAITINGTOSWITCH) && cd.hasFinished()) {
             switch(state) {
             case WAITINGTOSWITCH:
                 cd.setCooldown((int) Utils.Client.ranModuleVal(delay, Utils.Java.rand())/3);
                 break;
                 case NONE:
                     int slot = getGHeadSlot();
-                    if(slot == -1 ) return;
+                    if(slot == -1 ) {
+                        state = State.WAITINGTOSWITCH;
+                        return;
+                    }
                     originalSlot = mc.thePlayer.inventory.currentItem;
                     mc.thePlayer.inventory.currentItem = slot;
 

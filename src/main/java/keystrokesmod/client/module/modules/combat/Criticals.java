@@ -18,6 +18,9 @@ public class Criticals extends Module {
 
     @Subscribe
     public void onPacket(PacketEvent e) {
+        if (mc.thePlayer == null) {
+            return;
+        }
         if (e.isOutgoing()) {
             if (e.getPacket() instanceof C02PacketUseEntity) {
                 C02PacketUseEntity packet = (C02PacketUseEntity) e.getPacket();
@@ -31,6 +34,9 @@ public class Criticals extends Module {
     }
 
     private void doCrit() {
+        if (mc.thePlayer == null || mc.getNetHandler() == null) {
+            return;
+        }
         if (mode.getMode() == Mode.Packet) {
             double posX = mc.thePlayer.posX;
             double posY = mc.thePlayer.posY;

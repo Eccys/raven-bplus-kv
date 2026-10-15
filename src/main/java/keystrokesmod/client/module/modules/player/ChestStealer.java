@@ -22,6 +22,7 @@ public class ChestStealer extends Module {
     private final DoubleSliderSetting closeDelay;
     private final TickSetting autoClose;
     private boolean inChest;
+    private boolean closingChest;
     private final CoolDown delayTimer = new CoolDown(0);
     private final CoolDown closeTimer = new CoolDown(0);
     private ArrayList<Slot> sortedSlots;
@@ -44,6 +45,7 @@ public class ChestStealer extends Module {
                         firstDelay.getInputMax() + 0.01));
                 delayTimer.start();
                 generatePath(chest);
+                closingChest = false;
                 inChest = true;
             }
             if (inChest && !sortedSlots.isEmpty()) {
@@ -57,17 +59,20 @@ public class ChestStealer extends Module {
                 }
             }
             if (sortedSlots.isEmpty() && autoClose.isToggled()) {
-                if (closeTimer.firstFinish()) {
-                    mc.thePlayer.closeScreen();
-                    inChest = false;
-                } else {
+                if (!closingChest) {
                     closeTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(closeDelay.getInputMin(),
                             closeDelay.getInputMax() + 0.01));
                     closeTimer.start();
+                    closingChest = true;
+                } else if (closeTimer.hasFinished()) {
+                    mc.thePlayer.closeScreen();
+                    inChest = false;
+                    closingChest = false;
                 }
             }
         } else {
             inChest = false;
+            closingChest = false;
         }
     }
 
@@ -91,7 +96,7 @@ public class ChestStealer extends Module {
         Slot current = in[ThreadLocalRandom.current().nextInt(0, in.length)];
         for (int i = 0; i < in.length; i++) {
             if (i == in.length - 1) {
-                out[in.length - 1] = Arrays.stream(in).filter(p -> !p.visited).findAny().orElseGet(null);
+                out[in.length - 1] = Arrays.stream(in).filter(p -> !p.visited).findAny().orElse(null);
                 break;
             }
             Slot finalCurrent = current;

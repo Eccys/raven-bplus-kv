@@ -55,6 +55,7 @@ public abstract class MixinEntityPlayer extends EntityLivingBase {
 
     /**
      * @author mc code
+     * @reason KeepSprint module hook on player attack
      */
     @Overwrite
     public void attackTargetEntityWithCurrentItem(Entity p_attackTargetEntityWithCurrentItem_1_) {

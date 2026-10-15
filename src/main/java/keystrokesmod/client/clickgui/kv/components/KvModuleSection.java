@@ -88,14 +88,15 @@ public class KvModuleSection extends KvSection {
         for (KvComponent component : currentCategories)
 			if (component.mouseDown(mouseX, mouseY, mouseButton))
 					return true;
-        if(openModule != null)
+        if (openModule != null) {
 			try {
-        	openModule.clicked(mouseButton, mouseX, mouseY);
-        	return false;
-        	} catch(Exception e) {
+        	    openModule.clicked(mouseButton, mouseX, mouseY);
+        	} catch (Exception e) {
         		e.printStackTrace(); // lol
         	}
-        for (KvComponent component : allCurrentComponents)
+            return true;
+        }
+        for (KvComponent component : currentComponents)
         	if (component.mouseDown(mouseX, mouseY, mouseButton))
         		return true;
         return false;
@@ -177,6 +178,9 @@ public class KvModuleSection extends KvSection {
 
     @Override
     public void mouseReleased(int x, int y, int button) {
+        if (openModule != null) {
+            openModule.mouseReleased(x, y, button);
+        }
     	for (KvComponent component : allCurrentComponents)
 			component.mouseReleased(x, y, button);
     }
@@ -193,13 +197,14 @@ public class KvModuleSection extends KvSection {
 		//	moduleScroll += i;
     	if(
     			((mouseX > categoryX) && (mouseX < (categoryX + categoryWidth)) && (mouseY > categoryY) && (mouseY < (categoryY + categoryHeight)))
-
+    			&& !currentCategories.isEmpty()
     			&& ((currentCategories.get(currentCategories.size() - 1).getY() > categoryY) || (i > 0))) {
     			categoryScroll += i;
 
 			if(categoryScroll > 0) categoryScroll = 0;
 
     	} else if(((mouseX > moduleX) && (mouseX < (moduleX + moduleWidth)) && (mouseY > moduleY) && (mouseY < (moduleY + moduleHeight)))
+    			&& !currentComponents.isEmpty()
     			&& ((currentComponents.get(currentComponents.size() - 1 ).getY() > moduleY) || (i > 0))) {
     		moduleScroll += i;
     		if(moduleScroll > 0) moduleScroll = 0;

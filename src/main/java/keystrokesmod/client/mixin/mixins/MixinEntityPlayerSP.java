@@ -101,6 +101,7 @@ public abstract class MixinEntityPlayerSP extends AbstractClientPlayer {
 
     /**
      * @author mc code
+     * @reason dispatch TickEvent and pre/post UpdateEvent around motion packets
      */
     @Overwrite
     public void onUpdateWalkingPlayer() {

@@ -5,6 +5,7 @@ import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.Render2DEvent;
 import keystrokesmod.client.event.impl.TickEvent;
 import keystrokesmod.client.module.Module;
+import keystrokesmod.client.module.setting.Setting;
 import keystrokesmod.client.module.setting.impl.DescriptionSetting;
 import keystrokesmod.client.module.setting.impl.TickSetting;
 import keystrokesmod.client.utils.Utils;
@@ -46,11 +47,13 @@ public class BridgeInfo extends Module {
         this.registerSetting(ep = new TickSetting("Edit position", false));
     }
 
+    @Override
     public void onDisable() {
         this.rv();
     }
 
-    public void guiButtonToggled(TickSetting b) {
+    @Override
+    public void guiButtonToggled(Setting b) {
         if (b == ep) {
             ep.disable();
             mc.displayGuiScreen(new BridgeInfo.eh());
@@ -58,8 +61,29 @@ public class BridgeInfo extends Module {
 
     }
 
+    public static String parseOpponentName(String chatLine) {
+        if (chatLine == null || !chatLine.contains("Opponent:")) {
+            return null;
+        }
+        String[] colonParts = chatLine.split(":", 2);
+        if (colonParts.length < 2) {
+            return null;
+        }
+        String n = colonParts[1].trim();
+        if (n.contains("[") && n.contains("]")) {
+            int closeIdx = n.lastIndexOf(']');
+            if (closeIdx + 1 < n.length()) {
+                n = n.substring(closeIdx + 1).trim();
+            } else {
+                n = "";
+            }
+        }
+        return n.isEmpty() ? null : n;
+    }
+
     @Subscribe
     public void onTick(TickEvent ev) {
+        if (!Utils.Player.isPlayerInGame()) return;
         if (!this.en.isEmpty() && this.ibd()) {
             EntityPlayer enem = null;
 
@@ -132,19 +156,17 @@ public class BridgeInfo extends Module {
         if (fe.getEvent() instanceof ClientChatReceivedEvent) {
             ClientChatReceivedEvent c = ((ClientChatReceivedEvent) fe.getEvent());
 
-            if (Utils.Player.isPlayerInGame()) {
+            if (Utils.Player.isPlayerInGame() && c.message != null) {
                 String s = Utils.Java.str(c.message.getUnformattedText());
                 if (s.startsWith(" ")) {
                     String qt = "First player to score 5 goals wins";
                     if (s.contains(qt)) {
                         this.q = true;
                     } else if (this.q && s.contains("Opponent:")) {
-                        String n = s.split(":")[1].trim();
-                        if (n.contains("[")) {
-                            n = n.split("] ")[1];
+                        String parsed = parseOpponentName(s);
+                        if (parsed != null && !parsed.isEmpty()) {
+                            this.en = parsed;
                         }
-
-                        this.en = n;
                         this.q = false;
                     }
                 }

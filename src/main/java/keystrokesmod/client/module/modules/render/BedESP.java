@@ -1,12 +1,15 @@
 package keystrokesmod.client.module.modules.render;
 
 import java.awt.Color;
+import java.util.HashSet;
+import java.util.Set;
 import org.lwjgl.opengl.GL11;
 import com.google.common.eventbus.Subscribe;
 import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.module.Module;
 import keystrokesmod.client.module.Module.ModuleCategory;
 import keystrokesmod.client.module.setting.impl.RGBSetting;
+import keystrokesmod.client.module.setting.impl.SliderSetting;
 import keystrokesmod.client.module.setting.impl.TickSetting;
 import keystrokesmod.client.utils.Utils;
 import keystrokesmod.client.utils.RenderUtils;
@@ -20,16 +23,34 @@ public class BedESP extends Module {
     
     public static RGBSetting color;
     public static TickSetting rainbow;
+    public static SliderSetting range;
     private int rgbColor;
+    private final Set<BlockPos> cachedBeds = new HashSet<>();
+    private long lastScanTime = 0L;
+    private static final long SCAN_INTERVAL_MS = 500L;
 
     public BedESP() {
         super("BedESP", ModuleCategory.render);
         this.registerSetting(color = new RGBSetting("Color", 255, 0, 255));
         this.registerSetting(rainbow = new TickSetting("Rainbow", false));
+        this.registerSetting(range = new SliderSetting("Range", 50.0, 10.0, 100.0, 5.0));
+        this.rgbColor = color.getRGB();
     }
 
+    @Override
+    public void onEnable() {
+        cachedBeds.clear();
+        lastScanTime = 0L;
+    }
+
+    @Override
+    public void onDisable() {
+        cachedBeds.clear();
+    }
+
+    @Override
     public void guiUpdate() {
-        this.rgbColor = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
+        this.rgbColor = color.getRGB();
     }
 
     @Subscribe
@@ -41,29 +62,45 @@ public class BedESP extends Module {
         }
     }
 
-    private void renderBeds() {
-        int color = rainbow.isToggled() ? Utils.Client.rainbowDraw(1, 0) : this.rgbColor;
-        
-        // Search for beds in reasonable range
-        int searchRadius = 100;
+    private void updateBedCache() {
+        cachedBeds.clear();
+        int searchRadius = (int) range.getInput();
+        int maxDistSq = searchRadius * searchRadius;
         BlockPos playerPos = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ);
-        
+        int minY = Math.max(0, playerPos.getY() - 32);
+        int maxY = Math.min(255, playerPos.getY() + 32);
+
         for (int x = -searchRadius; x <= searchRadius; x++) {
-            for (int y = -searchRadius; y <= searchRadius; y++) {
-                for (int z = -searchRadius; z <= searchRadius; z++) {
-                    BlockPos pos = playerPos.add(x, y, z);
-                    
-                    // Check distance
-                    double distance = mc.thePlayer.getDistanceSq(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                    if (distance > 100 * 100) continue; // 100 block limit
-                    
-                    // Check if block is a bed
+            for (int z = -searchRadius; z <= searchRadius; z++) {
+                if (x * x + z * z > maxDistSq) continue;
+                int bx = playerPos.getX() + x;
+                int bz = playerPos.getZ() + z;
+                if (!mc.theWorld.isBlockLoaded(new BlockPos(bx, playerPos.getY(), bz))) continue;
+                for (int y = minY; y <= maxY; y++) {
+                    BlockPos pos = new BlockPos(bx, y, bz);
                     IBlockState state = mc.theWorld.getBlockState(pos);
-                    if (state.getBlock() instanceof BlockBed) {
-                        // Render the bed ESP
-                        renderBedESP(pos, color);
+                    if (state != null && state.getBlock() instanceof BlockBed) {
+                        cachedBeds.add(pos);
                     }
                 }
+            }
+        }
+    }
+
+    private void renderBeds() {
+        this.rgbColor = color.getRGB();
+        int renderColor = rainbow.isToggled() ? Utils.Client.rainbowDraw(1, 0) : this.rgbColor;
+
+        long now = System.currentTimeMillis();
+        if (now - lastScanTime >= SCAN_INTERVAL_MS) {
+            updateBedCache();
+            lastScanTime = now;
+        }
+
+        double maxDistSq = range.getInput() * range.getInput();
+        for (BlockPos pos : cachedBeds) {
+            if (mc.thePlayer.getDistanceSq(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= maxDistSq) {
+                renderBedESP(pos, renderColor);
             }
         }
     }
@@ -92,11 +129,13 @@ public class BedESP extends Module {
     }
     
     private void drawBoundingBox(double x, double y, double z, double x2, double y2, double z2, float lineWidth, int color) {
+        int alphaBits = (color >> 24) & 255;
+        float alpha = alphaBits == 0 ? 1.0f : (alphaBits / 255.0f);
         float[] rgb = new float[]{
             (color >> 16 & 255) / 255.0f,
             (color >> 8 & 255) / 255.0f,
             (color & 255) / 255.0f,
-            (color >> 24 & 255) / 255.0f
+            alpha
         };
         
         GL11.glColor4f(rgb[0], rgb[1], rgb[2], rgb[3]);

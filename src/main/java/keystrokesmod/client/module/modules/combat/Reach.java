@@ -24,16 +24,24 @@ public class Reach extends Module {
 
     @Override
     public void postApplyConfig() {
-       la = (KillAura) Raven.moduleManager.getModuleByClazz(KillAura.class);
+        if (Raven.moduleManager != null) {
+            la = (KillAura) Raven.moduleManager.getModuleByClazz(KillAura.class);
+        }
     }
 
     public static double getReach() {
-        if(la != null && la.isEnabled())
+        if (la == null && Raven.moduleManager != null) {
+            la = (KillAura) Raven.moduleManager.getModuleByClazz(KillAura.class);
+        }
+        if (la != null && la.isEnabled())
             return KillAura.reach.getInput();
 
-        double normal = mc.playerController.extendedReach()? 5 : 3;
+        if (!Utils.Player.isPlayerInGame() || mc.playerController == null)
+            return 3.0D;
 
-        if (!Utils.Player.isPlayerInGame() || (weapon_only.isToggled() && !Utils.Player.isPlayerHoldingWeapon()))
+        double normal = mc.playerController.extendedReach() ? 5 : 3;
+
+        if (weapon_only.isToggled() && !Utils.Player.isPlayerHoldingWeapon())
             return normal;
 
         if (moving_only.isToggled() && ((double) mc.thePlayer.moveForward == 0.0D)
@@ -43,6 +51,6 @@ public class Reach extends Module {
         if (sprint_only.isToggled() && !mc.thePlayer.isSprinting())
             return normal;
 
-        return Utils.Client.ranModuleVal(reach, Utils.Java.rand()) + (mc.playerController.extendedReach()? 2 : 0);
+        return Utils.Client.ranModuleVal(reach, Utils.Java.rand()) + (mc.playerController.extendedReach() ? 2 : 0);
     }
 }

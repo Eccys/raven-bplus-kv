@@ -24,7 +24,7 @@ public class NoSlow extends Module {
 
     @Subscribe
     public void onPacket(PacketEvent e) {
-        if (noReset.isToggled()) {
+        if (noReset.isToggled() && mc.thePlayer != null) {
             if (e.getPacket() instanceof S30PacketWindowItems) {
                 if (mc.thePlayer.isUsingItem()) {
                     e.cancel();

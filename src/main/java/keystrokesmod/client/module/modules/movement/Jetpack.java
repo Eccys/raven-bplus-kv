@@ -56,6 +56,9 @@ public class Jetpack extends Module {
     }
 
     private void handleJetpackFly(EntityPlayerSP player) {
+        if (onlyWalls.isToggled() && !player.isCollidedHorizontally) {
+            return;
+        }
         JetpackMode currentMode = (JetpackMode) mode.getMode();
         
         switch (currentMode) {
@@ -111,9 +114,6 @@ public class Jetpack extends Module {
         } else {
             player.motionY = 0;
         }
-        
-        // Allow horizontal movement without falling
-        player.motionY = Math.max(player.motionY, 0);
         
         if (noFall.isToggled()) {
             player.fallDistance = 0;

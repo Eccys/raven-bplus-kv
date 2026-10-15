@@ -25,15 +25,24 @@ public class RGBSetting extends Setting {
     public RGBSetting(String name, int defaultRed, int defaultGreen, int defaultBlue) {
         super(name);
         this.name = name;
-        this.defaultColour = new int[] { defaultRed, defaultGreen, defaultBlue };
-        this.colour = new int[] { defaultRed, defaultGreen, defaultBlue };
-        colorRGB = new Color(defaultRed, defaultGreen, defaultBlue).getRGB();
+        int r = clampChannel(defaultRed);
+        int g = clampChannel(defaultGreen);
+        int b = clampChannel(defaultBlue);
+        this.defaultColour = new int[] { r, g, b };
+        this.colour = new int[] { r, g, b };
+        this.colorRGB = new Color(r, g, b).getRGB();
+    }
+
+    private static int clampChannel(int value) {
+        return value > 255 ? 255 : (value < 0 ? 0 : value);
     }
 
     @Override
     public void resetToDefaults() {
-        for (int i = 0; i <= colour.length; i++)
-			this.colour[i] = this.defaultColour[i];
+        for (int i = 0; i < this.colour.length && i < this.defaultColour.length; i++) {
+            this.colour[i] = this.defaultColour[i];
+        }
+        this.colorRGB = new Color(this.colour[0], this.colour[1], this.colour[2]).getRGB();
     }
 
     @Override
@@ -53,12 +62,17 @@ public class RGBSetting extends Setting {
 
     @Override
     public void applyConfigFromJson(JsonObject data) {
+        if (data == null || !data.has("type") || data.get("type").isJsonNull())
+            return;
         if (!data.get("type").getAsString().equals(getSettingType()))
             return;
 
-        setRed(data.get("red").getAsInt());
-        setGreen(data.get("green").getAsInt());
-        setBlue(data.get("blue").getAsInt());
+        if (data.has("red") && !data.get("red").isJsonNull())
+            setRed(data.get("red").getAsInt());
+        if (data.has("green") && !data.get("green").isJsonNull())
+            setGreen(data.get("green").getAsInt());
+        if (data.has("blue") && !data.get("blue").isJsonNull())
+            setBlue(data.get("blue").getAsInt());
     }
 
     @Override
@@ -83,6 +97,9 @@ public class RGBSetting extends Setting {
     }
 
     public int getColor(int colour) {
+        if (colour < 0 || colour >= this.colour.length) {
+            return 0;
+        }
         return this.colour[colour];
     }
 
@@ -103,13 +120,24 @@ public class RGBSetting extends Setting {
     }
 
     public void setColor(int colour, int value) {
-    	value = value > 255 ? 255 : value < 0 ? 0 : value;
+        if (colour < 0 || colour >= this.colour.length) {
+            return;
+        }
+        value = clampChannel(value);
         this.colour[colour] = value;
         this.colorRGB = new Color(this.colour[0], this.colour[1], this.colour[2]).getRGB();
     }
 
     public void setColors(int[] colour) {
-        this.colour = colour.clone();
+        if (colour == null || colour.length < 3) {
+            return;
+        }
+        this.colour = new int[] {
+            clampChannel(colour[0]),
+            clampChannel(colour[1]),
+            clampChannel(colour[2])
+        };
+        this.colorRGB = new Color(this.colour[0], this.colour[1], this.colour[2]).getRGB();
     }
 
 

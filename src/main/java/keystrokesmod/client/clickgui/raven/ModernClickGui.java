@@ -380,6 +380,8 @@ public class ModernClickGui extends GuiScreen {
             int moduleHeight = 35;
             int spacing = 10;
             int modulesPerRow = Math.max(1, (gridWidth + spacing) / (moduleWidth + spacing));
+            float smoothScroll = (float) (scrollAmount * 0.9);
+            int currentY = gridStartY - (int) smoothScroll;
             
             int moduleIndex = 0;
             for (int row = 0; row < 100; row++) {
@@ -388,10 +390,11 @@ public class ModernClickGui extends GuiScreen {
                     
                     ModuleButton btn = filteredModules.get(moduleIndex);
                     int moduleX = gridStartX + col * (moduleWidth + spacing);
-                    int moduleY = gridStartY + row * (moduleHeight + spacing);
+                    int moduleY = currentY + row * (moduleHeight + spacing);
                     
-                    if (btn.isMouseOverGrid(mouseX, mouseY, moduleX, moduleY, moduleWidth, moduleHeight)) {
+                    if (btn.isMouseOverGrid(mouseX, mouseY, moduleX, moduleY, moduleWidth, btn.getHeight())) {
                         btn.onClick(mouseX, mouseY, mouseButton, moduleX, moduleY);
+                        updateTotalHeight();
                         return;
                     }
                     moduleIndex++;
@@ -410,9 +413,9 @@ public class ModernClickGui extends GuiScreen {
         int dw = Mouse.getEventDWheel();
         if (dw != 0) {
             scrollAmount += (dw > 0 ? -50 : 50);
-            int maxScroll = Math.max(0, -((height - 100) - totalModuleHeight));
-            if (scrollAmount > 0) scrollAmount = 0;
-            if (scrollAmount < maxScroll) scrollAmount = maxScroll;
+            int maxScroll = Math.max(0, totalModuleHeight - (height - 100));
+            if (scrollAmount < 0) scrollAmount = 0;
+            if (scrollAmount > maxScroll) scrollAmount = maxScroll;
         }
     }
 

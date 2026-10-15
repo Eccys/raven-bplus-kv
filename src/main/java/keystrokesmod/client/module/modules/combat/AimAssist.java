@@ -47,7 +47,7 @@ public class AimAssist extends Module {
         this.registerSetting(complimentPitch = new SliderSetting("Speed 2 (pitch)", 15.0D, 2D, 97.0D, 1.0D));
         this.registerSetting(fov = new SliderSetting("FOV", 90.0D, 10.0D, 360.0D, 1.0D));
         this.registerSetting(distance = new SliderSetting("Distance", 4.5D, 1.0D, 10.0D, 0.1D));
-        this.registerSetting(pitchOffSet = new SliderSetting("pitchOffSet (blocks)", 4D, -2, 2, 0.050D));
+        this.registerSetting(pitchOffSet = new SliderSetting("pitchOffSet (blocks)", 0.0D, -2, 2, 0.050D));
         this.registerSetting(clickAim = new TickSetting("Click aim", false));
         this.registerSetting(breakBlocks = new TickSetting("Break blocks", true));
         this.registerSetting(weaponOnly = new TickSetting("Weapon only", false));
@@ -90,17 +90,21 @@ public class AimAssist extends Module {
                                 mc.thePlayer.rotationYaw += val * 0.4F; 
                             }
                             if (aimPitch.isToggled()) {
-                                double complimentSpeed = Utils.Player.PitchFromEntity(en,
-                                        (float) pitchOffSet.getInput())
-                                        * (ThreadLocalRandom.current().nextDouble(complimentPitch.getInput() - 1.47328,
-                                                complimentPitch.getInput() + 2.48293) / 100);
+                                double pitchDiff = Utils.Player.PitchFromEntity(en, (float) pitchOffSet.getInput());
+                                if (pitchDiff > 1.0D || pitchDiff < -1.0D) {
+                                    double complimentSpeed = pitchDiff
+                                            * (ThreadLocalRandom.current().nextDouble(complimentPitch.getInput() - 1.47328,
+                                                    complimentPitch.getInput() + 2.48293) / 100);
 
-                                float val = (float) (-(complimentSpeed
-                                        + (n / (101.0D - (float) ThreadLocalRandom.current()
-                                                .nextDouble(speedPitch.getInput() - 4.723847,
-                                                        speedPitch.getInput())))));
+                                    float val = (float) (-(complimentSpeed
+                                            + (pitchDiff / (101.0D - (float) ThreadLocalRandom.current()
+                                                    .nextDouble(speedPitch.getInput() - 4.723847,
+                                                            speedPitch.getInput())))));
 
-                                mc.thePlayer.rotationPitch += val * 0.4F;
+                                    mc.thePlayer.rotationPitch += val * 0.4F;
+                                    if (mc.thePlayer.rotationPitch > 90.0F) mc.thePlayer.rotationPitch = 90.0F;
+                                    if (mc.thePlayer.rotationPitch < -90.0F) mc.thePlayer.rotationPitch = -90.0F;
+                                }
                             }
                         }
                     }
@@ -137,27 +141,25 @@ public class AimAssist extends Module {
     }
 
     public static boolean removeFriend(String name) {
+        if (name == null) return false;
         boolean removed = false;
-        boolean found = false;
-        for (NetworkPlayerInfo networkPlayerInfo : new ArrayList<>(mc.getNetHandler().getPlayerInfoMap())) {
-            Entity entity = mc.theWorld.getPlayerEntityByName(networkPlayerInfo.getDisplayName().getUnformattedText());
-            if (entity.getName().equalsIgnoreCase(name) || entity.getCustomNameTag().equalsIgnoreCase(name)) {
-                removed = removeFriend(entity);
-                found = true;
+        for (int i = friends.size() - 1; i >= 0; i--) {
+            Entity entity = friends.get(i);
+            if (entity != null && (name.equalsIgnoreCase(entity.getName()) || name.equalsIgnoreCase(entity.getCustomNameTag()))) {
+                friends.remove(i);
+                removed = true;
             }
         }
-
-        return found && removed;
+        return removed;
     }
 
     public static boolean removeFriend(Entity entityPlayer) {
         try {
-            friends.remove(entityPlayer);
+            return friends.remove(entityPlayer);
         } catch (Exception eeeeee) {
             eeeeee.printStackTrace();
             return false;
         }
-        return true;
     }
 
     public static ArrayList<Entity> getFriends() {

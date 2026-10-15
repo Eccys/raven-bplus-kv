@@ -63,15 +63,15 @@ public class BlockHit extends Module {
         if (fe.getEvent() instanceof AttackEntityEvent) {
             AttackEntityEvent e = (AttackEntityEvent) fe.getEvent();
 
-            if (isSecondCall() || executingAction)
+            if (isSecondCall() || executingAction || mc.thePlayer == null || e.target == null)
                 return;
 
             hits++;
 
-            if (hits > rHit) {
+            if (hits > rHit || rHit < 1) {
                 hits = 1;
-                int eaSports = (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1);
-                rHit = ThreadLocalRandom.current().nextInt((eaSports));
+                int eaSports = Math.max(1, (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1));
+                rHit = ThreadLocalRandom.current().nextInt(eaSports);
                 rHit += (int) hitPer.getInputMin();
             }
 

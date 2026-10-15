@@ -55,10 +55,14 @@ public class AutoTool extends Module {
 
         // make sure that we are allowed to breack blocks if ac is enabled
         LeftClicker autoClicker = (LeftClicker) Raven.moduleManager.getModuleByClazz(LeftClicker.class);
-        if (autoClicker.isEnabled()) {
+        if (autoClicker != null && autoClicker.isEnabled()) {
             if (!LeftClicker.breakBlocks.isToggled()) {
                 return;
             }
+        }
+
+        if (mc.objectMouseOver == null) {
+            return;
         }
 
         BlockPos lookingAtBlock = mc.objectMouseOver.getBlockPos();
@@ -109,16 +113,19 @@ public class AutoTool extends Module {
     }
 
     private void hotkeyToFastest() {
+        if (mc.objectMouseOver == null || mc.objectMouseOver.getBlockPos() == null) {
+            return;
+        }
         int index = -1;
         double speed = 1;
+
+        BlockPos p = mc.objectMouseOver.getBlockPos();
+        Block bl = mc.theWorld.getBlockState(p).getBlock();
 
         for (int slot = 0; slot <= 8; slot++) {
             ItemStack itemInSlot = mc.thePlayer.inventory.getStackInSlot(slot);
             if (itemInSlot != null) {
                 if (itemInSlot.getItem() instanceof ItemTool || itemInSlot.getItem() instanceof ItemShears) {
-                    BlockPos p = mc.objectMouseOver.getBlockPos();
-                    Block bl = mc.theWorld.getBlockState(p).getBlock();
-
                     if (itemInSlot.getItem().getDigSpeed(itemInSlot, bl.getDefaultState()) > speed) {
                         speed = itemInSlot.getItem().getDigSpeed(itemInSlot, bl.getDefaultState());
                         index = slot;
@@ -127,8 +134,7 @@ public class AutoTool extends Module {
             }
         }
 
-        if (index == -1 || speed <= 1.1) {
-        } else {
+        if (index != -1 && speed > 1.1) {
             Utils.Player.hotkeyToSlot(index);
         }
     }

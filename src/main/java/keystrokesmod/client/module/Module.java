@@ -250,9 +250,12 @@ public class Module {
     }
 
     public void unRegister() {
-        if(registered) {
-            registered = false;
-            Raven.eventBus.unregister(this);
+        if (registered || enabled) {
+            this.enabled = false;
+            if (registered) {
+                registered = false;
+                Raven.eventBus.unregister(this);
+            }
             onDisable();
         }
     }

@@ -51,6 +51,8 @@ public class ClickAssist extends Module {
     }
 
     public void onDisable() {
+        this.fix(0);
+        this.fix(1);
         this.engagedLeft = false;
         this.engagedRight = false;
         this.bot = null;
@@ -58,6 +60,7 @@ public class ClickAssist extends Module {
 
     @Subscribe
     public void onMouseUpdate(ForgeEvent fe) {
+        if (this.bot == null) return;
         if (fe.getEvent() instanceof MouseEvent) {
             MouseEvent ev = (MouseEvent) fe.getEvent();
 
@@ -128,6 +131,7 @@ public class ClickAssist extends Module {
     }
 
     private void fix(int t) {
+        if (this.bot == null) return;
         if (t == 0) {
             if (this.engagedLeft && !Mouse.isButtonDown(0)) {
                 this.bot.mouseRelease(16);

@@ -296,19 +296,31 @@ public class XRay extends Module {
     }
 
     private void renderBlockOutline(WorldRenderer worldRenderer, double x, double y, double z, float r, float g, float b, float a) {
-        worldRenderer.begin(GL11.GL_LINE_STRIP, DefaultVertexFormats.POSITION_COLOR);
+        worldRenderer.begin(GL11.GL_LINES, DefaultVertexFormats.POSITION_COLOR);
         
         // Bottom face
         worldRenderer.pos(x, y, z).color(r, g, b, a).endVertex();
         worldRenderer.pos(x + 1, y, z).color(r, g, b, a).endVertex();
+        
+        worldRenderer.pos(x + 1, y, z).color(r, g, b, a).endVertex();
         worldRenderer.pos(x + 1, y, z + 1).color(r, g, b, a).endVertex();
+        
+        worldRenderer.pos(x + 1, y, z + 1).color(r, g, b, a).endVertex();
+        worldRenderer.pos(x, y, z + 1).color(r, g, b, a).endVertex();
+        
         worldRenderer.pos(x, y, z + 1).color(r, g, b, a).endVertex();
         worldRenderer.pos(x, y, z).color(r, g, b, a).endVertex();
         
         // Top face
         worldRenderer.pos(x, y + 1, z).color(r, g, b, a).endVertex();
         worldRenderer.pos(x + 1, y + 1, z).color(r, g, b, a).endVertex();
+        
+        worldRenderer.pos(x + 1, y + 1, z).color(r, g, b, a).endVertex();
         worldRenderer.pos(x + 1, y + 1, z + 1).color(r, g, b, a).endVertex();
+        
+        worldRenderer.pos(x + 1, y + 1, z + 1).color(r, g, b, a).endVertex();
+        worldRenderer.pos(x, y + 1, z + 1).color(r, g, b, a).endVertex();
+        
         worldRenderer.pos(x, y + 1, z + 1).color(r, g, b, a).endVertex();
         worldRenderer.pos(x, y + 1, z).color(r, g, b, a).endVertex();
         

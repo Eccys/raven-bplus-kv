@@ -15,6 +15,7 @@ public class ComboSetting<T extends Enum<?>> extends Setting {
     private T currentOption;
     private final T defaultOption;
 
+    @SuppressWarnings("unchecked")
     public ComboSetting(String settingName, T defaultOption) {
         super(settingName);
 
@@ -22,7 +23,7 @@ public class ComboSetting<T extends Enum<?>> extends Setting {
         this.defaultOption = defaultOption;
 
         try {
-            this.options = (T[]) defaultOption.getClass().getMethod("values").invoke(null);
+            this.options = (T[]) defaultOption.getDeclaringClass().getEnumConstants();
         } catch (Exception e) {
             e.printStackTrace();
         }

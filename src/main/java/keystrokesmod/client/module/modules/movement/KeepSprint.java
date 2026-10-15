@@ -6,6 +6,7 @@ import keystrokesmod.client.module.modules.combat.Reach;
 import keystrokesmod.client.module.setting.impl.DescriptionSetting;
 import keystrokesmod.client.module.setting.impl.SliderSetting;
 import keystrokesmod.client.module.setting.impl.TickSetting;
+import keystrokesmod.client.utils.Utils;
 import net.minecraft.entity.Entity;
 
 public class KeepSprint extends Module {
@@ -23,10 +24,15 @@ public class KeepSprint extends Module {
     }
 
     public static void sl(Entity en) {
+        if (!Utils.Player.isPlayerInGame()) return;
         double dist;
-        Module reach = Raven.moduleManager.getModuleByClazz(Reach.class);
+        Module reach = Raven.moduleManager != null ? Raven.moduleManager.getModuleByClazz(Reach.class) : null;
         if (c.isToggled() && reach != null && reach.isEnabled() && !mc.thePlayer.capabilities.isCreativeMode) {
-            dist = mc.objectMouseOver.hitVec.distanceTo(mc.getRenderViewEntity().getPositionEyes(1.0F));
+            if (mc.objectMouseOver != null && mc.objectMouseOver.hitVec != null && mc.getRenderViewEntity() != null) {
+                dist = mc.objectMouseOver.hitVec.distanceTo(mc.getRenderViewEntity().getPositionEyes(1.0F));
+            } else {
+                dist = en != null ? mc.thePlayer.getDistanceToEntity(en) : 3.0D;
+            }
             double val;
             if (dist > 3.0D) {
                 val = (100.0D - (double) ((float) b.getInput())) / 100.0D;

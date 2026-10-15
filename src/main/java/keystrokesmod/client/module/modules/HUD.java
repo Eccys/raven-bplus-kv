@@ -84,13 +84,14 @@ public class HUD extends Module {
         this.registerSetting(arrayListOpacity = new SliderSetting("Array List Opacity", 0.8, 0.1, 1.0, 0.1));
         this.registerSetting(logoMode = new ComboSetting("Logo Mode:", lmv.l7));
         this.registerSetting(logoDesc1 = new DescriptionSetting("cd logomode put an image logo.png"));
-        this.registerSetting(logoDesc1 = new DescriptionSetting("in the keystrokes folder"));
+        this.registerSetting(logoDesc2 = new DescriptionSetting("in the keystrokes folder"));
         showedError = false;
         showInHud = false;
     }
 
     private void setUpLogo() {
-        RenderUtils.getResourcePath("/assets/keystrokes/logohud/" + logoMode.getMode().toString() + ".png");
+        ResourceLocation loaded = RenderUtils.getResourcePath("/assets/keystrokes/logohud/" + logoMode.getMode().toString() + ".png");
+        ravenLogo = (loaded != null && !"null".equals(loaded.getResourcePath())) ? loaded : null;
     }
 
     @Override
@@ -132,9 +133,10 @@ public class HUD extends Module {
             drawWatermark();
             drawKeybinds();
 
-            boolean fhe = Raven.moduleManager.getModuleByName("Fake Hud").isEnabled();
+            Module fakeHudMod = Raven.moduleManager.getModuleByName("Fake Hud");
+            boolean fhe = fakeHudMod != null && fakeHudMod.isEnabled();
+            ScaledResolution sr = new ScaledResolution(mc);
             if (!e) {
-                ScaledResolution sr = new ScaledResolution(mc);
                 positionMode = Utils.HUD.getPostitionMode(hudX, hudY, sr.getScaledWidth(), sr.getScaledHeight());
                 if ((positionMode == Utils.HUD.PositionMode.UPLEFT) || (positionMode == Utils.HUD.PositionMode.UPRIGHT)) {
                     if (!fhe)
@@ -165,17 +167,12 @@ public class HUD extends Module {
             if (hudY < 0)
 				hudY = margin;
 
-            if ((hudX + textBoxWidth) > (mc.displayWidth / 2))
-				hudX = (mc.displayWidth / 2) - textBoxWidth - margin;
-
-            if ((hudY + textBoxHeight) > (mc.displayHeight / 2))
-				hudY = (mc.displayHeight / 2) - textBoxHeight;
-            
-            // Fix right-side alignment - ensure array list stays within bounds
-            if (hudX + textBoxWidth > mc.displayWidth - margin)
-                hudX = mc.displayWidth - textBoxWidth - margin;
-            if (hudY + textBoxHeight > mc.displayHeight - margin)
-                hudY = mc.displayHeight - textBoxHeight - margin;
+            int maxHudX = Math.max(margin, sr.getScaledWidth() - textBoxWidth - margin);
+            int maxHudY = Math.max(margin, sr.getScaledHeight() - textBoxHeight - margin);
+            if (hudX > maxHudX)
+                hudX = maxHudX;
+            if (hudY > maxHudY)
+                hudY = maxHudY;
 
             drawLogo(textBoxWidth);
             y += logoHeight;
@@ -526,14 +523,77 @@ public class HUD extends Module {
         super.onDisable();
     }
 
-    private static String buildHudDataString() {
+    public static String buildHudDataString() {
         StringBuilder hudData = new StringBuilder();
         hudData.append("hudX,").append(hudX).append(",").append(hudY).append(";");
         hudData.append("watermarkX,").append(watermarkX).append(",").append(watermarkY).append(";");
         hudData.append("keybindsX,").append(keybindsX).append(",").append(keybindsY).append(";");
         hudData.append("targetHUDX,").append(targetHUDX).append(",").append(targetHUDY).append(";");
         hudData.append("radarX,").append(keystrokesmod.client.module.modules.render.Radar.radarX).append(",").append(keystrokesmod.client.module.modules.render.Radar.radarY).append(";");
+        if (positionMode != null) {
+            hudData.append("positionMode,").append(positionMode.name()).append(";");
+        }
         return hudData.toString();
+    }
+
+    public static void parseHudDataString(String hudData) {
+        if (hudData == null || hudData.isEmpty()) return;
+
+        String[] positions = hudData.split(";");
+        for (String pos : positions) {
+            String[] parts = pos.split(",");
+            if (parts.length >= 2 && "positionMode".equals(parts[0].trim())) {
+                try {
+                    positionMode = Utils.HUD.PositionMode.valueOf(parts[1].trim());
+                } catch (IllegalArgumentException ignored) {
+                }
+                continue;
+            }
+            if (parts.length == 3) {
+                String element = parts[0].trim();
+                int x = Integer.parseInt(parts[1].trim());
+                int y = Integer.parseInt(parts[2].trim());
+
+                switch (element) {
+                    case "hudX":
+                        hudX = x;
+                        hudY = y;
+                        break;
+                    case "hudY":
+                        hudY = y;
+                        break;
+                    case "watermarkX":
+                        watermarkX = x;
+                        watermarkY = y;
+                        break;
+                    case "watermarkY":
+                        watermarkY = y;
+                        break;
+                    case "keybindsX":
+                        keybindsX = x;
+                        keybindsY = y;
+                        break;
+                    case "keybindsY":
+                        keybindsY = y;
+                        break;
+                    case "targetHUDX":
+                        targetHUDX = x;
+                        targetHUDY = y;
+                        break;
+                    case "targetHUDY":
+                        targetHUDY = y;
+                        break;
+                    case "radarX":
+                        keystrokesmod.client.module.modules.render.Radar.radarX = x;
+                        keystrokesmod.client.module.modules.render.Radar.radarY = y;
+                        break;
+                    case "radarY":
+                        keystrokesmod.client.module.modules.render.Radar.radarY = y;
+                        break;
+                }
+            }
+        }
+        e = false;
     }
 
     private void loadHUDPositions() {
@@ -543,34 +603,11 @@ public class HUD extends Module {
         try (FileReader reader = new FileReader(hudFile)) {
             JsonParser jsonParser = new JsonParser();
             JsonObject data = jsonParser.parse(reader).getAsJsonObject();
-            if (data == null || !data.has("hud_positions")) return;
+            if (data == null || !data.has("hud_positions") || data.get("hud_positions").isJsonNull()) return;
 
             String hudData = data.get("hud_positions").getAsString();
-            if (hudData == null || hudData.isEmpty()) return;
-
-            String[] positions = hudData.split(";");
-            for (String pos : positions) {
-                String[] parts = pos.split(",");
-                if (parts.length == 3) {
-                    String element = parts[0];
-                    int x = Integer.parseInt(parts[1]);
-                    int y = Integer.parseInt(parts[2]);
-
-                    switch (element) {
-                        case "hudX": hudX = x; break;
-                        case "hudY": hudY = y; break;
-                        case "watermarkX": watermarkX = x; break;
-                        case "watermarkY": watermarkY = y; break;
-                        case "keybindsX": keybindsX = x; break;
-                        case "keybindsY": keybindsY = y; break;
-                        case "targetHUDX": targetHUDX = x; break;
-                        case "targetHUDY": targetHUDY = y; break;
-                        case "radarX": keystrokesmod.client.module.modules.render.Radar.radarX = x; break;
-                        case "radarY": keystrokesmod.client.module.modules.render.Radar.radarY = y; break;
-                    }
-                }
-            }
-        } catch (JsonSyntaxException | ClassCastException | IOException e) {
+            parseHudDataString(hudData);
+        } catch (JsonSyntaxException | ClassCastException | NumberFormatException | IllegalStateException | IOException ex) {
             resetAllPositions();
         }
     }

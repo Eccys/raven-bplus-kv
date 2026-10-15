@@ -82,6 +82,7 @@ public class HUDEditor extends Module {
                 public void updatePosition(int newX, int newY) {
                     HUD.hudX = newX;
                     HUD.hudY = newY;
+                    HUD.e = false;
                 }
             });
             
@@ -322,6 +323,7 @@ public class HUDEditor extends Module {
             if (button == resetAllButton) {
                 HUD.hudX = 5;
                 HUD.hudY = 70;
+                HUD.e = false;
                 HUD.watermarkX = 5;
                 HUD.watermarkY = 5;
                 HUD.keybindsX = 5;

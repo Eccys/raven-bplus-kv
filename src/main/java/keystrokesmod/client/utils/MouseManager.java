@@ -51,27 +51,20 @@ public class MouseManager {
 
     // prev f
     public static int getLeftClickCounter() {
-        if (!Utils.Player.isPlayerInGame())
-            return leftClicks.size();
-        for (Long lon : leftClicks) {
-            if (lon < System.currentTimeMillis() - 1000L) {
-                leftClicks.remove(lon);
-                break;
-            }
-        }
+        long cutoff = System.currentTimeMillis() - 1000L;
+        leftClicks.removeIf(lon -> lon == null || lon < cutoff);
         return leftClicks.size();
     }
 
     // prev i
     public static int getRightClickCounter() {
-        if (!Utils.Player.isPlayerInGame())
-            return leftClicks.size();
-        for (Long lon : rightClicks) {
-            if (lon < System.currentTimeMillis() - 1000L) {
-                rightClicks.remove(lon);
-                break;
-            }
-        }
+        long cutoff = System.currentTimeMillis() - 1000L;
+        rightClicks.removeIf(lon -> lon == null || lon < cutoff);
         return rightClicks.size();
+    }
+
+    public static void clearClicks() {
+        leftClicks.clear();
+        rightClicks.clear();
     }
 }

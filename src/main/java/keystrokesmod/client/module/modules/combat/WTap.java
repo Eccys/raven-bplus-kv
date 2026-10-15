@@ -85,14 +85,20 @@ public class WTap extends Module {
     }
 
     public void wTap() {
-        if (state != WtapState.NONE)
+        if (state != WtapState.NONE || target == null || mc.thePlayer == null)
             return;
-        if (!(Math.random() <= chance.getInput() / 100)) {
-            hits++;
+        hits++;
+        if (hits > rhit) {
+            hits = 1;
+            int easports = (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1);
+            rhit = ThreadLocalRandom.current().nextInt(Math.max(1, easports));
+            rhit += (int) hitPer.getInputMin();
         }
         if (mc.thePlayer.getDistanceToEntity(target) > range.getInput()
                 || (onlyPlayers.isToggled() && !(target instanceof EntityPlayer))
-                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword()) || !(rhit >= hits))
+                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword())
+                || !(Math.random() <= chance.getInput() / 100)
+                || !(rhit == hits))
             return;
         trystartCombo();
     }
@@ -104,7 +110,7 @@ public class WTap extends Module {
         state = WtapState.NONE;
         hits = 0;
         int easports = (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1);
-        rhit = ThreadLocalRandom.current().nextInt((easports));
+        rhit = ThreadLocalRandom.current().nextInt(Math.max(1, easports));
         rhit += (int) hitPer.getInputMin();
     }
 
@@ -112,7 +118,7 @@ public class WTap extends Module {
         state = WtapState.TAPPING;
         KeyBinding.setKeyBindState(mc.gameSettings.keyBindForward.getKeyCode(), false);
         double cd = ThreadLocalRandom.current().nextDouble(waitMs.getInputMin(), waitMs.getInputMax() + 0.01);
-        if (dynamic.isToggled()) {
+        if (dynamic.isToggled() && target != null && mc.thePlayer != null) {
             cd = 3 - mc.thePlayer.getDistanceToEntity(target) < 3
                     ? (cd + (3 - mc.thePlayer.getDistanceToEntity(target) * tapMultiplier.getInput() * 10))
                     : cd;

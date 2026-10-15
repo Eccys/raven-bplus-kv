@@ -82,14 +82,18 @@ public class ShiftTap extends Module {
     }
 
     public void wTap() {
-        if (state != WtapState.NONE)
+        if (state != WtapState.NONE || mc.thePlayer == null || target == null)
             return;
-        if (!(Math.random() <= chance.getInput() / 100)) {
-            hits++;
+        hits++;
+        if (rhit < 1) {
+            int easports = Math.max(1, (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1));
+            rhit = ThreadLocalRandom.current().nextInt(easports) + (int) hitPer.getInputMin();
         }
         if (mc.thePlayer.getDistanceToEntity(target) > range.getInput()
                 || (onlyPlayers.isToggled() && !(target instanceof EntityPlayer))
-                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword()) || !(rhit >= hits))
+                || (onlySword.isToggled() && !Utils.Player.isPlayerHoldingSword())
+                || hits < rhit
+                || !(Math.random() <= chance.getInput() / 100.0))
             return;
         trystartCombo();
     }
@@ -98,8 +102,8 @@ public class ShiftTap extends Module {
         state = WtapState.NONE;
         KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
         hits = 0;
-        int easports = (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1);
-        rhit = ThreadLocalRandom.current().nextInt((easports));
+        int easports = Math.max(1, (int) (hitPer.getInputMax() - hitPer.getInputMin() + 1));
+        rhit = ThreadLocalRandom.current().nextInt(easports);
         rhit += (int) hitPer.getInputMin();
     }
 
@@ -107,7 +111,7 @@ public class ShiftTap extends Module {
         state = WtapState.TAPPING;
         KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), true);
         double cd = ThreadLocalRandom.current().nextDouble(waitMs.getInputMin(), waitMs.getInputMax() + 0.01);
-        if (dynamic.isToggled()) {
+        if (dynamic.isToggled() && mc.thePlayer != null && target != null) {
             cd = 3 - mc.thePlayer.getDistanceToEntity(target) < 3
                     ? (cd + (3 - mc.thePlayer.getDistanceToEntity(target) * tapMultiplier.getInput() * 10))
                     : cd;

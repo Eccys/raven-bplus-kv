@@ -89,20 +89,23 @@ public class EntityESP extends Module {
         this.registerSetting(lineWidth = new SliderSetting("Line Width", 2.0, 0.5, 5.0, 0.5));
         this.registerSetting(opacity = new SliderSetting("Opacity", 0.8, 0.1, 1.0, 0.1));
         this.registerSetting(fadeDistance = new SliderSetting("Fade Distance", 50.0, 20.0, 100.0, 5.0));
+        guiUpdate();
     }
 
+    @Override
     public void guiUpdate() {
-        this.playerRgb = new Color(playerColor.getRed(), playerColor.getGreen(), playerColor.getBlue()).getRGB();
-        this.mobRgb = new Color(mobColor.getRed(), mobColor.getGreen(), mobColor.getBlue()).getRGB();
-        this.animalRgb = new Color(animalColor.getRed(), animalColor.getGreen(), animalColor.getBlue()).getRGB();
-        this.itemRgb = new Color(itemColor.getRed(), itemColor.getGreen(), itemColor.getBlue()).getRGB();
-        this.projectileRgb = new Color(projectileColor.getRed(), projectileColor.getGreen(), projectileColor.getBlue()).getRGB();
+        this.playerRgb = playerColor.getRGB();
+        this.mobRgb = mobColor.getRGB();
+        this.animalRgb = animalColor.getRGB();
+        this.itemRgb = itemColor.getRGB();
+        this.projectileRgb = projectileColor.getRGB();
     }
 
     @Subscribe
     public void onForgeEvent(ForgeEvent fe) {
         if (fe.getEvent() instanceof RenderWorldLastEvent) {
             if (Utils.Player.isPlayerInGame()) {
+                guiUpdate();
                 renderEntities();
             }
         }
@@ -154,7 +157,7 @@ public class EntityESP extends Module {
 
     private int getEntityColor(Entity entity) {
         if (rainbow.isToggled()) {
-            return 0; // Rainbow color
+            return Utils.Client.rainbowDraw(2L, 0L);
         }
         
         if (entity instanceof EntityPlayer) {
@@ -399,8 +402,8 @@ public class EntityESP extends Module {
     }
 
     private void drawFilledBox(AxisAlignedBB bb, float r, float g, float b, float a) {
-        // Simplified filled box rendering
-        // You would need proper tessellator rendering for filled boxes
+        GL11.glColor4f(r, g, b, a);
+        Utils.HUD.dbb(bb, r, g, b);
     }
 
     private void drawCornerBox(double x, double y, double z, double size, float r, float g, float b, float a) {
@@ -409,8 +412,11 @@ public class EntityESP extends Module {
     }
 
     private void drawLine(double x1, double y1, double z1, double x2, double y2, double z2, float r, float g, float b, float a) {
-        // Simplified line drawing
-        // You would need proper tessellator rendering for lines
+        GL11.glColor4f(r, g, b, a);
+        GL11.glBegin(GL11.GL_LINES);
+        GL11.glVertex3d(x1, y1, z1);
+        GL11.glVertex3d(x2, y2, z2);
+        GL11.glEnd();
     }
 
     private float[] getRGB(int color) {
@@ -423,12 +429,13 @@ public class EntityESP extends Module {
 
     private float calculateAlpha(double distance) {
         double maxDistance = renderDistance.getInput();
-        if (distance <= fadeDistance.getInput()) {
-            return 1.0f;
+        double fadeDist = fadeDistance.getInput();
+        if (distance <= fadeDist || maxDistance <= fadeDist) {
+            return distance <= maxDistance ? 1.0f : 0.0f;
         } else if (distance >= maxDistance) {
             return 0.0f;
         } else {
-            return (float) (1.0 - (distance - fadeDistance.getInput()) / (maxDistance - fadeDistance.getInput()));
+            return (float) (1.0 - (distance - fadeDist) / (maxDistance - fadeDist));
         }
     }
 }

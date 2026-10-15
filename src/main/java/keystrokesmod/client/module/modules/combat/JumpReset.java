@@ -16,6 +16,9 @@ public class JumpReset extends Module {
 
     @Subscribe
     public void onPacket(PacketEvent e) {
+        if (mc.thePlayer == null) {
+            return;
+        }
         if (e.isIncoming()) {
             if (e.getPacket() instanceof S12PacketEntityVelocity) {
                 if (((S12PacketEntityVelocity) e.getPacket()).getEntityID() == mc.thePlayer.getEntityId()) {

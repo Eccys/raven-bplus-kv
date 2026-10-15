@@ -76,7 +76,6 @@ public class Healing extends Module {
             } else if (itemMode.getMode() == HealingItems.HEAL_POT && isHPot(slot)) {
                 mc.thePlayer.inventory.currentItem = slot;
                 this.disable();
-                System.out.println("a");
                 return;
             }
         }
@@ -118,13 +117,14 @@ public class Healing extends Module {
 
         if (itemInSlot.getItem() instanceof ItemPotion) {
             ItemPotion ip = (ItemPotion) itemInSlot.getItem();
-            Utils.Player.sendMessageToSelf("" + slot);
-            for (PotionEffect pe : ip.getEffects(itemInSlot)) {
-                if (pe.getPotionID() == Potion.heal.id) {
-                    return true;
+            java.util.List<PotionEffect> effects = ip.getEffects(itemInSlot);
+            if (effects != null) {
+                for (PotionEffect pe : effects) {
+                    if (pe != null && pe.getPotionID() == Potion.heal.id) {
+                        return true;
+                    }
                 }
             }
-
         }
 
         return false;
@@ -135,7 +135,7 @@ public class Healing extends Module {
         if (itemInSlot == null)
             return false;
 
-        return itemInSlot.getItem() instanceof Item;
+        return itemInSlot.getItem() instanceof ItemSkull;
     }
 
     public boolean isFood(int slot) {

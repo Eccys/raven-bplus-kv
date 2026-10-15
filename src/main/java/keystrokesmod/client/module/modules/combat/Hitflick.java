@@ -54,7 +54,9 @@ public class Hitflick extends Module {
                 angle = 90;
         }
 
-        originalYaw = mc.thePlayer.rotationYaw;
+        if (!isFlicking) {
+            originalYaw = mc.thePlayer.rotationYaw;
+        }
         flickYaw = originalYaw + angle;
         isFlicking = true;
         flickUntil = System.currentTimeMillis() + (long) flickDuration.getInput();
@@ -66,7 +68,7 @@ public class Hitflick extends Module {
 
     @Subscribe
     public void onUpdate(UpdateEvent e) {
-        if (!isFlicking) return;
+        if (!isFlicking || !Utils.Player.isPlayerInGame()) return;
 
         if (System.currentTimeMillis() < flickUntil) {
             e.setYaw(flickYaw);
@@ -84,6 +86,9 @@ public class Hitflick extends Module {
 
     @Override
     public void onDisable() {
+        if (isFlicking && !silent.isToggled() && Utils.Player.isPlayerInGame()) {
+            mc.thePlayer.rotationYaw = originalYaw;
+        }
         isFlicking = false;
     }
 

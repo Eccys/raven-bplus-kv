@@ -27,7 +27,10 @@ version = "1.2"
 group = "keystrokesmod"
 archivesBaseName = "[1.8.9] BetterKeystrokes V"
 
-compileJava {
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+tasks.withType(JavaCompile) {
     sourceCompatibility = '1.8'
     targetCompatibility = '1.8'
     options.encoding = 'UTF-8'
@@ -86,6 +89,7 @@ dependencies {
         exclude module: 'slf4j-api'
     }
     compile 'org.jetbrains:annotations:22.0.0'
+    testCompile 'junit:junit:4.13.2'
 }
 
 processResources {

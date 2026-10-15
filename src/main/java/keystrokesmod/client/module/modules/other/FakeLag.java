@@ -33,6 +33,7 @@ public class FakeLag extends Module {
     private int packetsInQueue = 0;
     private long lagStartTime = 0;
     private boolean isLagging = false;
+    private boolean releasing = false;
     
     public enum LagMode {
         NORMAL, // Simple packet buffering
@@ -74,7 +75,7 @@ public class FakeLag extends Module {
 
     @Subscribe
     public void onPacketEvent(PacketEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (releasing || !event.isOutgoing() || !Utils.Player.isPlayerInGame()) return;
         
         Packet<?> packet = event.getPacket();
         
@@ -228,46 +229,60 @@ public class FakeLag extends Module {
     }
 
     private void releasePackets(int count) {
-        if (packetQueue.isEmpty()) return;
+        if (packetQueue.isEmpty() || releasing) return;
         
-        int released = 0;
-        List<Packet<?>> toRelease = new ArrayList<>();
-        
-        while (released < count && !packetQueue.isEmpty()) {
-            Packet<?> packet = packetQueue.poll();
-            if (packet != null) {
-                toRelease.add(packet);
-                released++;
+        releasing = true;
+        try {
+            int released = 0;
+            List<Packet<?>> toRelease = new ArrayList<>();
+            
+            while (released < count && !packetQueue.isEmpty()) {
+                Packet<?> packet = packetQueue.poll();
+                if (packet != null) {
+                    toRelease.add(packet);
+                    released++;
+                }
             }
-        }
-        
-        // Send the packets
-        for (Packet<?> packet : toRelease) {
-            mc.getNetHandler().addToSendQueue(packet);
-        }
-        
-        packetsInQueue -= released;
-        
-        if (debugMode.isToggled() && released > 0) {
-            Utils.Player.sendMessageToSelf("Released " + released + " packets");
+            
+            // Send the packets
+            if (mc.getNetHandler() != null) {
+                for (Packet<?> packet : toRelease) {
+                    mc.getNetHandler().addToSendQueue(packet);
+                }
+            }
+            
+            packetsInQueue = Math.max(0, packetsInQueue - released);
+            
+            if (debugMode.isToggled() && released > 0) {
+                Utils.Player.sendMessageToSelf("Released " + released + " packets");
+            }
+        } finally {
+            releasing = false;
         }
     }
 
     private void releaseAllPackets() {
-        if (packetQueue.isEmpty()) return;
+        if (packetQueue.isEmpty() || releasing) return;
         
-        List<Packet<?>> allPackets = new ArrayList<>(packetQueue);
-        packetQueue.clear();
-        
-        for (Packet<?> packet : allPackets) {
-            mc.getNetHandler().addToSendQueue(packet);
-        }
-        
-        int released = allPackets.size();
-        packetsInQueue -= released;
-        
-        if (debugMode.isToggled()) {
-            Utils.Player.sendMessageToSelf("Released all " + released + " packets");
+        releasing = true;
+        try {
+            List<Packet<?>> allPackets = new ArrayList<>(packetQueue);
+            packetQueue.clear();
+            
+            if (mc.getNetHandler() != null) {
+                for (Packet<?> packet : allPackets) {
+                    mc.getNetHandler().addToSendQueue(packet);
+                }
+            }
+            
+            int released = allPackets.size();
+            packetsInQueue = Math.max(0, packetsInQueue - released);
+            
+            if (debugMode.isToggled()) {
+                Utils.Player.sendMessageToSelf("Released all " + released + " packets");
+            }
+        } finally {
+            releasing = false;
         }
     }
 

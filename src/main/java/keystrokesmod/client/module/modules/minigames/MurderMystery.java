@@ -68,11 +68,11 @@ public class MurderMystery extends Module {
                             } while (entity.isInvisible());
                         } while (AntiBot.bot(entity));
                         String c4 = "&7[&cALERT&7]";
-                        if (entity.getHeldItem() != null && entity.getHeldItem().hasDisplayName()) {
+                        if (entity.getHeldItem() != null) {
                             Item i = entity.getHeldItem().getItem();
                             if (i instanceof ItemSword || i instanceof ItemAxe || i instanceof ItemEnderPearl
                                     || i instanceof ItemHoe || i instanceof ItemPickaxe || i instanceof ItemFishingRod
-                                    || entity.getHeldItem().getDisplayName().contains("Knife")) {
+                                    || (entity.getHeldItem().hasDisplayName() && entity.getHeldItem().getDisplayName().contains("Knife"))) {
 
                                 if (!mur.contains(entity)) {
                                     mur.add(entity);

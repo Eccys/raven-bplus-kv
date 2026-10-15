@@ -148,6 +148,7 @@ public class KillAura extends Module {
         float gcd = f * f * f * 1.2F;
         yaw -= yaw % gcd;
         pitch -= pitch % gcd;
+        pitch = MathHelper.clamp_float(pitch, -90.0F, 90.0F);
     }
 
     private void executeAttack() {
@@ -164,7 +165,9 @@ public class KillAura extends Module {
         
         // Unblock before hitting
         if (isBlocking) {
-            mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
+            if (mc.getNetHandler() != null) {
+                mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
+            }
             isBlocking = false;
         }
         
@@ -174,8 +177,10 @@ public class KillAura extends Module {
         // Autoblock after hitting
         AutoBlockMode mode = (AutoBlockMode) blockMode.getMode();
         if (mode == AutoBlockMode.Spoof && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
-            mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.getHeldItem()));
-            isBlocking = true;
+            if (mc.getNetHandler() != null) {
+                mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.getHeldItem()));
+                isBlocking = true;
+            }
         } else if (mode == AutoBlockMode.Interact && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
             mc.playerController.sendUseItem(mc.thePlayer, mc.theWorld, mc.thePlayer.getHeldItem());
             isBlocking = true;
@@ -248,9 +253,16 @@ public class KillAura extends Module {
     }
 
     @Subscribe
+    public void onPacket(PacketEvent e) {
+        if (disableOnTp.isToggled() && e.getPacket() instanceof S08PacketPlayerPosLook) {
+            this.disable();
+        }
+    }
+
+    @Subscribe
     public void renderWorldLast(ForgeEvent fe) {
         if((fe.getEvent() instanceof RenderWorldLastEvent) && (target != null)) {
-            int red = (int) (((20 - target.getHealth()) * 13) > 255 ? 255 : (20 - target.getHealth()) * 13);
+            int red = (int) Math.max(0, Math.min(255, (20 - target.getHealth()) * 13));
             int green = 255 - red;
             int rgb = new Color(red, green, 0).getRGB();
             Utils.HUD.drawBoxAroundEntity(target, 2, 0, 0, rgb, false);
@@ -271,7 +283,9 @@ public class KillAura extends Module {
 
     private void resetAttackState() {
         if (isBlocking) {
-            mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
+            if (mc.getNetHandler() != null) {
+                mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
+            }
             isBlocking = false;
         }
         target = null;
