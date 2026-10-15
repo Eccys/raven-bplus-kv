@@ -92,7 +92,7 @@ public class Velocity extends Module {
 
                 }
 
-                if (mc.thePlayer.getLastAttacker() instanceof EntityPlayer) {
+                if (f.isToggled() && mc.thePlayer.getLastAttacker() instanceof EntityPlayer) {
 
                     EntityPlayer attacker = (EntityPlayer) mc.thePlayer.getLastAttacker();
 
@@ -102,13 +102,13 @@ public class Velocity extends Module {
 
                     if ((item instanceof ItemEgg || item instanceof ItemBow || item instanceof ItemSnow
 
-                            || item instanceof ItemFishingRod) && mode == Mode.ItemHeld) {
+                            || item instanceof ItemSnowball || item instanceof ItemFishingRod) && g.getMode() == Mode.ItemHeld) {
 
                         velo();
 
                         return;
 
-                    } else if (attacker.getDistanceToEntity(mc.thePlayer) > dt.getInput()) {
+                    } else if (g.getMode() == Mode.Distance && attacker.getDistanceToEntity(mc.thePlayer) > dt.getInput()) {
 
                         velo();
 

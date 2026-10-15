@@ -180,9 +180,6 @@ public class KvCompactGui extends GuiScreen {
                 return;
             }
         }
-        if (currentSection != null) {
-            currentSection.mouseClicked(mouseX, mouseY, mouseButton);
-        }
     }
 
     @Override

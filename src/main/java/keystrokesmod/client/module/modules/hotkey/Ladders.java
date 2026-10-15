@@ -36,8 +36,6 @@ public class Ladders extends Module {
             if (checkSlot(slot)) {
                 if (mc.thePlayer.inventory.currentItem != slot) {
                     mc.thePlayer.inventory.currentItem = slot;
-                } else {
-                    return;
                 }
                 this.disable();
                 return;
@@ -51,6 +49,6 @@ public class Ladders extends Module {
         if (itemInSlot == null)
             return false;
 
-        return itemInSlot != null && itemInSlot.getDisplayName().equalsIgnoreCase("ladder");
+        return itemInSlot.getDisplayName().equalsIgnoreCase("ladder");
     }
 }

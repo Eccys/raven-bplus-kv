@@ -88,14 +88,15 @@ public class KvModuleSection extends KvSection {
         for (KvComponent component : currentCategories)
 			if (component.mouseDown(mouseX, mouseY, mouseButton))
 					return true;
-        if(openModule != null)
+        if (openModule != null) {
 			try {
-        	openModule.clicked(mouseButton, mouseX, mouseY);
-        	return false;
-        	} catch(Exception e) {
+        	    openModule.clicked(mouseButton, mouseX, mouseY);
+        	} catch (Exception e) {
         		e.printStackTrace(); // lol
         	}
-        for (KvComponent component : allCurrentComponents)
+            return true;
+        }
+        for (KvComponent component : currentComponents)
         	if (component.mouseDown(mouseX, mouseY, mouseButton))
         		return true;
         return false;
@@ -177,6 +178,9 @@ public class KvModuleSection extends KvSection {
 
     @Override
     public void mouseReleased(int x, int y, int button) {
+        if (openModule != null) {
+            openModule.mouseReleased(x, y, button);
+        }
     	for (KvComponent component : allCurrentComponents)
 			component.mouseReleased(x, y, button);
     }

@@ -41,8 +41,6 @@ public class Blocks extends Module {
                             || ((ItemBlock) itemInSlot.getItem()).getBlock().isFullCube())) {
                 if (mc.thePlayer.inventory.currentItem != slot) {
                     mc.thePlayer.inventory.currentItem = slot;
-                } else {
-                    return;
                 }
                 this.disable();
                 return;

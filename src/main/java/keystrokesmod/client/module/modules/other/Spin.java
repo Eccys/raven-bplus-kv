@@ -24,6 +24,10 @@ public class Spin extends Module {
 
     @Override
     public void onEnable() {
+        if (mc.thePlayer == null) {
+            this.disable();
+            return;
+        }
         cd.setCooldown((long) time.getInput());
         cd.start();
         yawOffSet = 0;
@@ -34,7 +38,7 @@ public class Spin extends Module {
 
     @Subscribe
     public void onUpdate(UpdateEvent e) {
-        if(cd.hasFinished()) {
+        if (mc.thePlayer == null || cd.hasFinished() || cd.getCooldownTime() <= 0) {
             this.disable();
             return;
         }

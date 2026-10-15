@@ -39,8 +39,6 @@ public class Trajectories extends Module {
             if (checkSlot(slot)) {
                 if (mc.thePlayer.inventory.currentItem != slot) {
                     mc.thePlayer.inventory.currentItem = slot;
-                } else {
-                    return;
                 }
                 this.disable();
                 return;

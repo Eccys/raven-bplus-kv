@@ -45,7 +45,7 @@ public class AutoWeapon extends Module {
 
                 int maxDamageSlot = Utils.Player.getMaxDamageSlot();
 
-                if (maxDamageSlot > 0 && Utils.Player.getSlotDamage(maxDamageSlot) > Utils.Player
+                if (maxDamageSlot >= 0 && Utils.Player.getSlotDamage(maxDamageSlot) > Utils.Player
                         .getSlotDamage(mc.thePlayer.inventory.currentItem)) {
                     mc.thePlayer.inventory.currentItem = maxDamageSlot;
                 }

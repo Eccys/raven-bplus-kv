@@ -35,6 +35,7 @@ public class Blink extends Module {
     private long lastReleaseTime = 0;
     private int packetCount = 0;
     private long startTime = 0;
+    private boolean releasing = false;
     
     public enum BlinkMode {
         NORMAL,     // Buffer all packets
@@ -58,7 +59,7 @@ public class Blink extends Module {
     
     @Subscribe
     public void packetEvent(PacketEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (releasing || !event.isOutgoing() || !Utils.Player.isPlayerInGame()) return;
         
         Packet<?> packet = event.getPacket();
         
@@ -146,18 +147,23 @@ public class Blink extends Module {
     }
     
     private void releasePackets() {
-        if (packets.isEmpty()) return;
+        if (packets.isEmpty() || releasing) return;
         
-        // Release all packets
-        while (!packets.isEmpty()) {
-            Packet<?> packet = packets.poll();
-            if (packet != null) {
-                mc.getNetHandler().addToSendQueue(packet);
+        releasing = true;
+        try {
+            // Release all packets
+            while (!packets.isEmpty()) {
+                Packet<?> packet = packets.poll();
+                if (packet != null && mc.getNetHandler() != null) {
+                    mc.getNetHandler().addToSendQueue(packet);
+                }
             }
+            
+            packetCount = 0;
+            lastReleaseTime = System.currentTimeMillis();
+        } finally {
+            releasing = false;
         }
-        
-        packetCount = 0;
-        lastReleaseTime = System.currentTimeMillis();
     }
     
     @Override

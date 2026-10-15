@@ -110,4 +110,66 @@ public class RavenCoreTest {
             assertTrue("Decreasing timer value should start near 50 and stay within [10, 50]", decVal > 10.0F && decVal <= 50.0F);
         }
     }
+
+    private enum SampleMode {
+        FIRST {
+            @Override
+            public String toString() {
+                return "FIRST";
+            }
+        },
+        SECOND,
+        THIRD
+    }
+
+    @Test
+    public void testDoubleSliderSettingRangeResetAndJsonClamping() {
+        keystrokesmod.client.module.setting.impl.DoubleSliderSetting slider =
+                new keystrokesmod.client.module.setting.impl.DoubleSliderSetting("Delay", 10.0, 20.0, 0.0, 100.0, 1.0);
+        assertEquals(10.0, slider.getInputMin(), 1e-6);
+        assertEquals(20.0, slider.getInputMax(), 1e-6);
+
+        // Move range to [80, 90] (disjoint from default [10, 20])
+        JsonObject moved = new JsonObject();
+        moved.addProperty("type", "doubleslider");
+        moved.addProperty("valueMin", 80.0);
+        moved.addProperty("valueMax", 90.0);
+        slider.applyConfigFromJson(moved);
+        assertEquals(80.0, slider.getInputMin(), 1e-6);
+        assertEquals(90.0, slider.getInputMax(), 1e-6);
+
+        // Resetting back to default [10, 20] must not clamp min to stale valMax (90) or max to stale valMin (80)
+        slider.resetToDefaults();
+        assertEquals(10.0, slider.getInputMin(), 1e-6);
+        assertEquals(20.0, slider.getInputMax(), 1e-6);
+
+        // Applying JSON with inverted min/max should swap and clamp within [0, 100]
+        JsonObject inverted = new JsonObject();
+        inverted.addProperty("type", "doubleslider");
+        inverted.addProperty("valueMin", 75.0);
+        inverted.addProperty("valueMax", 25.0);
+        slider.applyConfigFromJson(inverted);
+        assertEquals(25.0, slider.getInputMin(), 1e-6);
+        assertEquals(75.0, slider.getInputMax(), 1e-6);
+    }
+
+    @Test
+    public void testComboSettingWithAnonymousEnumConstant() {
+        keystrokesmod.client.module.setting.impl.ComboSetting<SampleMode> combo =
+                new keystrokesmod.client.module.setting.impl.ComboSetting<>("Mode", SampleMode.FIRST);
+        assertEquals(SampleMode.FIRST, combo.getMode());
+        combo.nextMode();
+        assertEquals(SampleMode.SECOND, combo.getMode());
+        combo.prevMode();
+        assertEquals(SampleMode.FIRST, combo.getMode());
+
+        JsonObject json = combo.getConfigAsJson();
+        assertEquals("mode", json.get("type").getAsString());
+        json.addProperty("value", "THIRD");
+        combo.applyConfigFromJson(json);
+        assertEquals(SampleMode.THIRD, combo.getMode());
+
+        combo.resetToDefaults();
+        assertEquals(SampleMode.FIRST, combo.getMode());
+    }
 }

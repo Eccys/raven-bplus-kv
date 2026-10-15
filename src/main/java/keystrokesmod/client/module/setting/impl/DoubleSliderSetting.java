@@ -42,6 +42,8 @@ public class DoubleSliderSetting extends Setting {
 
     @Override
     public void resetToDefaults() {
+        this.valMin = this.min;
+        this.valMax = this.max;
         this.setValueMin(defaultValMin);
         this.setValueMax(defaultValMax);
     }
@@ -65,8 +67,12 @@ public class DoubleSliderSetting extends Setting {
         if (!data.get("type").getAsString().equals(getSettingType()))
             return;
 
-        setValueMax(data.get("valueMax").getAsDouble());
-        setValueMin(data.get("valueMin").getAsDouble());
+        double rawMin = data.get("valueMin").getAsDouble();
+        double rawMax = data.get("valueMax").getAsDouble();
+        this.valMin = this.min;
+        this.valMax = this.max;
+        setValueMin(Math.min(rawMin, rawMax));
+        setValueMax(Math.max(rawMin, rawMax));
     }
 
     @Override

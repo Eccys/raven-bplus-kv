@@ -60,8 +60,10 @@ public class MiddleClick extends Module {
                     if (itemInSlot != null && itemInSlot.getItem() instanceof ItemEnderPearl) {
                         prevSlot = mc.thePlayer.inventory.currentItem;
                         mc.thePlayer.inventory.currentItem = slot;
-                        this.bot.mousePress(InputEvent.BUTTON3_MASK);
-                        this.bot.mouseRelease(InputEvent.BUTTON3_MASK);
+                        if (this.bot != null) {
+                            this.bot.mousePress(InputEvent.BUTTON3_MASK);
+                            this.bot.mouseRelease(InputEvent.BUTTON3_MASK);
+                        }
                         pearlEvent = 0;
                         hasClicked = true;
                         return;
@@ -90,7 +92,7 @@ public class MiddleClick extends Module {
     }
 
     private void removeFriend() {
-        Entity player = mc.objectMouseOver.entityHit;
+        Entity player = mc.objectMouseOver != null ? mc.objectMouseOver.entityHit : null;
         if (player == null) {
             Utils.Player.sendMessageToSelf("Please aim at a player/entity when removing them.");
         } else {
@@ -103,7 +105,7 @@ public class MiddleClick extends Module {
     }
 
     private void addFriend() {
-        Entity player = mc.objectMouseOver.entityHit;
+        Entity player = mc.objectMouseOver != null ? mc.objectMouseOver.entityHit : null;
         if (player == null) {
             Utils.Player.sendMessageToSelf("Please aim at a player/entity when adding them.");
         } else {
