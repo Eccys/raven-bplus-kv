@@ -38,24 +38,32 @@ public class ClientConfig {
         if (!cfgDir.exists())
             cfgDir.mkdir();
         cfgFile = new File(cfgDir, fileName);
-        if (!cfgFile.exists())
+        if (!cfgFile.exists()) {
             try {
                 cfgFile.createNewFile();
             } catch (final IOException e) {
                 e.printStackTrace();
             }
-        else {
+        } else {
             final JsonParser jsonParser = new JsonParser();
             try (FileReader reader = new FileReader(cfgFile)) {
-                final Object obj = jsonParser.parse(reader);
-                config = (JsonObject) obj;
+                final com.google.gson.JsonElement obj = jsonParser.parse(reader);
+                if (obj != null && obj.isJsonObject()) {
+                    config = obj.getAsJsonObject();
+                }
             } catch (JsonSyntaxException | ClassCastException | IOException e) {
                 e.printStackTrace();
             }
         }
+        if (config == null) {
+            saveConfig();
+        }
     }
 
     public void applyConfig() {
+        if (config == null) {
+            return;
+        }
         applyingConfig = true;
         try {
             Utils.URLS.hypixelApiKey = config.get("apikey").getAsString();
@@ -67,11 +75,15 @@ public class ClientConfig {
             loadModules(config.get("modules").getAsJsonObject());
         } catch (final Exception e) {
             e.printStackTrace();
+        } finally {
+            applyingConfig = false;
         }
-        applyingConfig = false;
     }
 
     public void applyKeyStrokeSettingsFromConfigFile() {
+        if (config == null || !config.has("keystrokes")) {
+            return;
+        }
         try {
             final JsonObject data = config.get("keystrokes").getAsJsonObject();
             KeyStroke.x = data.get("x").getAsInt();

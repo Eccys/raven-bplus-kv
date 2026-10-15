@@ -176,8 +176,12 @@ public class KvCompactGui extends GuiScreen {
     @Override
     public void mouseClicked(int mouseX, int mouseY, int mouseButton) {
         for (KvSection section : sections) {
-            if (section.mouseClicked(mouseX, mouseY, mouseButton));
-            return;
+            if (section.mouseClicked(mouseX, mouseY, mouseButton)) {
+                return;
+            }
+        }
+        if (currentSection != null) {
+            currentSection.mouseClicked(mouseX, mouseY, mouseButton);
         }
     }
 

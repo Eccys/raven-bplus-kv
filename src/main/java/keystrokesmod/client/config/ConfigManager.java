@@ -33,12 +33,13 @@ public class ConfigManager {
             configDirectory.mkdirs();
         }
         File defaultFile = new File(configDirectory, "default.bplus");
+        boolean existed = defaultFile.exists();
         this.config = new Config(defaultFile);
-        discoverConfigs();
-        configModuleManager = new ConfigModuleManager();
-        if (!defaultFile.exists()) {
+        if (!existed || isOutdated(defaultFile)) {
             save();
         }
+        discoverConfigs();
+        configModuleManager = new ConfigModuleManager();
     }
 
     /**
@@ -50,11 +51,13 @@ public class ConfigManager {
      */
     @SuppressWarnings("unused")
     public static boolean isOutdated(File file) {
+        if (file == null || !file.exists() || file.length() == 0) {
+            return true;
+        }
         JsonParser jsonParser = new JsonParser();
         try (FileReader reader = new FileReader(file)) {
-            Object obj = jsonParser.parse(reader);
-            JsonObject data = (JsonObject) obj;
-            return false;
+            com.google.gson.JsonElement obj = jsonParser.parse(reader);
+            return obj == null || !obj.isJsonObject();
         } catch (JsonSyntaxException | ClassCastException | IOException e) {
             e.printStackTrace();
         }
@@ -111,19 +114,26 @@ public class ConfigManager {
 
     public void setConfig(Config config) {
         applyingConfig = true;
-        this.config = config;
-        JsonObject data = config.getData().get("modules").getAsJsonObject();
-        List<Module> knownModules = new ArrayList<>(Raven.moduleManager.getConfigModules());
-        for (Module module : knownModules) {
-            if (!module.isClientConfig()) {
-                if (data.has(module.getName())) {
-                    module.applyConfigFromJson(data.get(module.getName()).getAsJsonObject());
-                } else {
-                    module.resetToDefaults();
+        try {
+            this.config = config;
+            JsonObject root = config.getData();
+            if (root == null || !root.has("modules")) {
+                return;
+            }
+            JsonObject data = root.get("modules").getAsJsonObject();
+            List<Module> knownModules = new ArrayList<>(Raven.moduleManager.getConfigModules());
+            for (Module module : knownModules) {
+                if (!module.isClientConfig()) {
+                    if (data.has(module.getName())) {
+                        module.applyConfigFromJson(data.get(module.getName()).getAsJsonObject());
+                    } else {
+                        module.resetToDefaults();
+                    }
                 }
             }
+        } finally {
+            applyingConfig = false;
         }
-        applyingConfig = false;
 
         // System.gc(); 
         // to whoever said configs memory leak, no they don't, but fuck you this is here now - sigma

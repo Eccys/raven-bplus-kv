@@ -14,6 +14,11 @@ public class Timer {
             return this.cached;
         } else {
             float t = (float) (System.currentTimeMillis() - this.last) / this.updates;
+            if (t < 0.0F) {
+                t = 0.0F;
+            } else if (t > 1.0F) {
+                t = 1.0F;
+            }
             switch (type) {
             case 1:
                 t = t < 0.5F ? 4.0F * t * t * t : (t - 1.0F) * (2.0F * t - 2.0F) * (2.0F * t - 2.0F) + 1.0F;
@@ -23,10 +28,13 @@ public class Timer {
                 break;
             case 3:
                 t = this.bounce(t);
+                break;
             }
 
             float value = begin + t * (end - begin);
-            if (end < value) {
+            if (begin <= end && value > end) {
+                value = end;
+            } else if (begin > end && value < end) {
                 value = end;
             }
 

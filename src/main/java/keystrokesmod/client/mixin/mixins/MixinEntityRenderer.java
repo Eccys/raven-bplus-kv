@@ -55,6 +55,7 @@ public class MixinEntityRenderer {
 
     /**
      * @author mc code
+     * @reason custom Reach and HitBox expansion in raytrace
      */
     @Overwrite
     public void getMouseOver(float p_getMouseOver_1_) {
@@ -124,7 +125,7 @@ public class MixinEntityRenderer {
      * @reason cant be fucked to deal with checking all the thing for night vision
      */
     @Overwrite
-    public void updateLightmap(float partialTicks) {
+    private void updateLightmap(float partialTicks) {
         if (this.lightmapUpdateNeeded) {
             this.mc.mcProfiler.startSection("lightTex");
             World world = this.mc.theWorld;
@@ -165,7 +166,7 @@ public class MixinEntityRenderer {
                         f10 = 0.25F + (f7 * 0.75F);
                     }
 
-                    if (this.mc.thePlayer.isPotionActive(Potion.nightVision) || Fullbright.nightVision) {
+                    if ((this.mc.thePlayer != null && this.mc.thePlayer.isPotionActive(Potion.nightVision)) || Fullbright.nightVision) {
                         float f15 = this.getNightVisionBrightness(this.mc.thePlayer, partialTicks);
                         float f12 = 1.0F / f8;
 
@@ -240,9 +241,10 @@ public class MixinEntityRenderer {
      * @reason cant be fucked to deal with checking all the thing for night vision
      */
     @Overwrite
-    public float getNightVisionBrightness(EntityLivingBase entitylivingbaseIn, float partialTicks) {
-        if (!mc.thePlayer.isPotionActive(16))
-            return 1;
+    private float getNightVisionBrightness(EntityLivingBase entitylivingbaseIn, float partialTicks) {
+        if (entitylivingbaseIn == null || !entitylivingbaseIn.isPotionActive(Potion.nightVision)
+                || entitylivingbaseIn.getActivePotionEffect(Potion.nightVision) == null)
+            return 1.0F;
         int i = entitylivingbaseIn.getActivePotionEffect(Potion.nightVision).getDuration();
         return i > 200 ? 1.0F : 0.7F + (MathHelper.sin(((float) i - partialTicks) * (float) Math.PI * 0.2F) * 0.3F);
     }

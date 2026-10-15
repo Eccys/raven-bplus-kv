@@ -248,9 +248,16 @@ public class KillAura extends Module {
     }
 
     @Subscribe
+    public void onPacket(PacketEvent e) {
+        if (disableOnTp.isToggled() && e.getPacket() instanceof S08PacketPlayerPosLook) {
+            this.disable();
+        }
+    }
+
+    @Subscribe
     public void renderWorldLast(ForgeEvent fe) {
         if((fe.getEvent() instanceof RenderWorldLastEvent) && (target != null)) {
-            int red = (int) (((20 - target.getHealth()) * 13) > 255 ? 255 : (20 - target.getHealth()) * 13);
+            int red = (int) Math.max(0, Math.min(255, (20 - target.getHealth()) * 13));
             int green = 255 - red;
             int rgb = new Color(red, green, 0).getRGB();
             Utils.HUD.drawBoxAroundEntity(target, 2, 0, 0, rgb, false);

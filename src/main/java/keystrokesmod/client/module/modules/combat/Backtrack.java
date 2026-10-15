@@ -128,7 +128,9 @@ public class Backtrack extends Module {
     }
     
     private long getRandomDelay(long min, long max) {
-        return min + (long)(Math.random() * (max - min));
+        long low = Math.min(min, max);
+        long high = Math.max(min, max);
+        return low + (long)(Math.random() * (high - low));
     }
     
     private long getSupposedDelay() {
@@ -182,6 +184,9 @@ public class Backtrack extends Module {
     
     @Subscribe
     public void onPacketReceive(PacketEvent event) {
+        if (mc.theWorld == null || mc.thePlayer == null) {
+            return;
+        }
         Packet<?> packet = event.getPacket();
         
         if (packet instanceof S18PacketEntityTeleport) {

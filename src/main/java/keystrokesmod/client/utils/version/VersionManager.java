@@ -26,34 +26,38 @@ public class VersionManager {
         String version = "1.3.0";
         String branch = "";
         int branchCommit = 0;
-        InputStream input;
-        Scanner scanner;
-        URL url;
-        BufferedReader bufferedReader;
 
         try {
-            url = new URL(versionUrl);
-            bufferedReader = new BufferedReader(new InputStreamReader(url.openStream()));
-            scanner = new Scanner(bufferedReader);
-            version = scanner.nextLine();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            URL url = new URL(versionUrl);
+            java.net.URLConnection conn = url.openConnection();
+            conn.setConnectTimeout(2500);
+            conn.setReadTimeout(2500);
+            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                 Scanner scanner = new Scanner(bufferedReader)) {
+                if (scanner.hasNextLine()) {
+                    version = scanner.nextLine().trim();
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         try {
-            url = new URL(branchUrl);
-            bufferedReader = new BufferedReader(new InputStreamReader(url.openStream()));
-            scanner = new Scanner(bufferedReader);
-            String[] line = scanner.nextLine().split("-");
-            branch = line[0];
-            branchCommit = Integer.parseInt(line[1]);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (NumberFormatException e) {
+            URL url = new URL(branchUrl);
+            java.net.URLConnection conn = url.openConnection();
+            conn.setConnectTimeout(2500);
+            conn.setReadTimeout(2500);
+            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                 Scanner scanner = new Scanner(bufferedReader)) {
+                if (scanner.hasNextLine()) {
+                    String[] line = scanner.nextLine().trim().split("-");
+                    branch = line[0];
+                    if (line.length > 1) {
+                        branchCommit = Integer.parseInt(line[1]);
+                    }
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
         }
 
@@ -64,21 +68,31 @@ public class VersionManager {
         String version = "1.3.0";
         String branch = "";
         int branchCommit = 0;
-        InputStream input;
-        Scanner scanner;
 
-        input = VersionManager.class.getResourceAsStream(versionFilePath);
-        assert input != null;
-        scanner = new Scanner(input);
-        version = scanner.nextLine();
+        try (InputStream input = VersionManager.class.getResourceAsStream(versionFilePath)) {
+            if (input != null) {
+                try (Scanner scanner = new Scanner(input)) {
+                    if (scanner.hasNextLine()) {
+                        version = scanner.nextLine().trim();
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+        }
 
-        input = VersionManager.class.getResourceAsStream(branchFilePath);
-        scanner = new Scanner(input);
-        String[] line = scanner.nextLine().split("-");
-        branch = line[0];
-        try {
-            branchCommit = Integer.parseInt(line[1]);
-        } catch (NumberFormatException ignored) {
+        try (InputStream input = VersionManager.class.getResourceAsStream(branchFilePath)) {
+            if (input != null) {
+                try (Scanner scanner = new Scanner(input)) {
+                    if (scanner.hasNextLine()) {
+                        String[] line = scanner.nextLine().trim().split("-");
+                        branch = line[0];
+                        if (line.length > 1) {
+                            branchCommit = Integer.parseInt(line[1]);
+                        }
+                    }
+                }
+            }
+        } catch (IOException | NumberFormatException ignored) {
         }
 
         this.clientVersion = new Version(version, branch, branchCommit);

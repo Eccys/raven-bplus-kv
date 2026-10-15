@@ -193,13 +193,14 @@ public class KvModuleSection extends KvSection {
 		//	moduleScroll += i;
     	if(
     			((mouseX > categoryX) && (mouseX < (categoryX + categoryWidth)) && (mouseY > categoryY) && (mouseY < (categoryY + categoryHeight)))
-
+    			&& !currentCategories.isEmpty()
     			&& ((currentCategories.get(currentCategories.size() - 1).getY() > categoryY) || (i > 0))) {
     			categoryScroll += i;
 
 			if(categoryScroll > 0) categoryScroll = 0;
 
     	} else if(((mouseX > moduleX) && (mouseX < (moduleX + moduleWidth)) && (mouseY > moduleY) && (mouseY < (moduleY + moduleHeight)))
+    			&& !currentComponents.isEmpty()
     			&& ((currentComponents.get(currentComponents.size() - 1 ).getY() > moduleY) || (i > 0))) {
     		moduleScroll += i;
     		if(moduleScroll > 0) moduleScroll = 0;

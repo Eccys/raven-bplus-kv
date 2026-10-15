@@ -9,11 +9,18 @@ public class Version {
     private final ArrayList<Integer> versionNumbers = new ArrayList<>();
 
     public Version(String version, String branchName, int branchCommit) {
-        this.version = version.replace("-", ".");
-        this.branchName = branchName;
+        this.version = (version == null ? "0.0.0" : version).replace("-", ".");
+        this.branchName = branchName == null ? "" : branchName;
         this.branchCommit = branchCommit;
         for (String number : this.version.split("\\.")) {
-            this.versionNumbers.add(Integer.parseInt(number));
+            try {
+                this.versionNumbers.add(Integer.parseInt(number.trim()));
+            } catch (NumberFormatException ignored) {
+                this.versionNumbers.add(0);
+            }
+        }
+        while (this.versionNumbers.size() < 3) {
+            this.versionNumbers.add(0);
         }
     }
 
@@ -34,24 +41,45 @@ public class Version {
     }
 
     public boolean isNewerThan(Version versionToCompare) {
-        if (versionToCompare.getVersionNumbers().get(0) < this.getVersionNumbers().get(0)) {
+        if (versionToCompare == null) {
             return true;
-        } else if (versionToCompare.getVersionNumbers().get(0) > this.getVersionNumbers().get(0)) {
-            return false;
         }
-        if (versionToCompare.getVersionNumbers().get(1) < this.getVersionNumbers().get(1)) {
-            return true;
-        } else if (versionToCompare.getVersionNumbers().get(1) > this.getVersionNumbers().get(1)) {
-            return false;
+        int maxLen = Math.max(this.versionNumbers.size(), versionToCompare.getVersionNumbers().size());
+        for (int i = 0; i < maxLen; i++) {
+            int ours = i < this.versionNumbers.size() ? this.versionNumbers.get(i) : 0;
+            int theirs = i < versionToCompare.getVersionNumbers().size() ? versionToCompare.getVersionNumbers().get(i) : 0;
+            if (theirs < ours) {
+                return true;
+            } else if (theirs > ours) {
+                return false;
+            }
         }
-        return versionToCompare.getVersionNumbers().get(2) < this.getVersionNumbers().get(2);
+        return false;
     }
 
     public boolean equals(Version version) {
-        ArrayList<Integer> now = this.getVersionNumbers();
-        ArrayList<Integer> nvw = version.getVersionNumbers();
+        if (version == null) {
+            return false;
+        }
+        int maxLen = Math.max(this.versionNumbers.size(), version.getVersionNumbers().size());
+        for (int i = 0; i < maxLen; i++) {
+            int ours = i < this.versionNumbers.size() ? this.versionNumbers.get(i) : 0;
+            int theirs = i < version.getVersionNumbers().size() ? version.getVersionNumbers().get(i) : 0;
+            if (ours != theirs) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-        return now.get(0).equals(nvw.get(0)) && now.get(1).equals(nvw.get(1)) && now.get(2).equals(nvw.get(2));
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof Version) && equals((Version) obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return versionNumbers.hashCode();
     }
 
     @Override

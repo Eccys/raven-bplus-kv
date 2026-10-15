@@ -25,8 +25,9 @@ public class Config {
             }
         } else {
             try {
-                creationDate1 = getData().get("creationTime").getAsLong();
-            } catch (NullPointerException e) {
+                JsonObject data = getData();
+                creationDate1 = (data != null && data.has("creationTime")) ? data.get("creationTime").getAsLong() : 0L;
+            } catch (Exception e) {
                 creationDate1 = 0L;
             }
         }
@@ -41,7 +42,7 @@ public class Config {
         JsonParser jsonParser = new JsonParser();
         try (FileReader reader = new FileReader(file)) {
             JsonElement obj = jsonParser.parse(reader);
-            return obj.isJsonNull() ? null : obj.getAsJsonObject();
+            return (obj == null || !obj.isJsonObject()) ? null : obj.getAsJsonObject();
         } catch (JsonSyntaxException | ClassCastException | IOException e) {
             e.printStackTrace();
         }
