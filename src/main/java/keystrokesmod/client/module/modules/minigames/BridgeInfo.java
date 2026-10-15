@@ -62,14 +62,14 @@ public class BridgeInfo extends Module {
     }
 
     public static String parseOpponentName(String chatLine) {
-        if (chatLine == null || !chatLine.contains("Opponent:")) {
+        if (chatLine == null) {
             return null;
         }
-        String[] colonParts = chatLine.split(":", 2);
-        if (colonParts.length < 2) {
+        int markerIdx = chatLine.indexOf("Opponent:");
+        if (markerIdx == -1) {
             return null;
         }
-        String n = colonParts[1].trim();
+        String n = chatLine.substring(markerIdx + "Opponent:".length()).trim();
         if (n.contains("[") && n.contains("]")) {
             int closeIdx = n.lastIndexOf(']');
             if (closeIdx + 1 < n.length()) {

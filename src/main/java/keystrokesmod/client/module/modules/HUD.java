@@ -55,6 +55,8 @@ public class HUD extends Module {
     public static int targetHUDY = 100;
     private double logoHeight;
     public static boolean e;
+    private int lastScaledWidth = -1;
+    private int lastScaledHeight = -1;
     
     private InputStream inputStream;
     private ResourceLocation ravenLogo;
@@ -136,7 +138,9 @@ public class HUD extends Module {
             Module fakeHudMod = Raven.moduleManager.getModuleByName("Fake Hud");
             boolean fhe = fakeHudMod != null && fakeHudMod.isEnabled();
             ScaledResolution sr = new ScaledResolution(mc);
-            if (!e) {
+            if (!e || sr.getScaledWidth() != lastScaledWidth || sr.getScaledHeight() != lastScaledHeight) {
+                lastScaledWidth = sr.getScaledWidth();
+                lastScaledHeight = sr.getScaledHeight();
                 positionMode = Utils.HUD.getPostitionMode(hudX, hudY, sr.getScaledWidth(), sr.getScaledHeight());
                 if ((positionMode == Utils.HUD.PositionMode.UPLEFT) || (positionMode == Utils.HUD.PositionMode.UPRIGHT)) {
                     if (!fhe)
@@ -465,6 +469,8 @@ public class HUD extends Module {
             if (b == this.resetPosButton) {
                 this.marginX = hudX = 5;
                 this.marginY = hudY = 70;
+                positionMode = Utils.HUD.PositionMode.UPLEFT;
+                e = false;
             }
 
         }
@@ -489,10 +495,12 @@ public class HUD extends Module {
 
     public static void setHudX(int hudX) {
         HUD.hudX = hudX;
+        HUD.e = false;
     }
 
     public static void setHudY(int hudY) {
         HUD.hudY = hudY;
+        HUD.e = false;
     }
     
     public static void setTargetHUDPosition(int x, int y) {
@@ -551,8 +559,14 @@ public class HUD extends Module {
             }
             if (parts.length == 3) {
                 String element = parts[0].trim();
-                int x = Integer.parseInt(parts[1].trim());
-                int y = Integer.parseInt(parts[2].trim());
+                final int x;
+                final int y;
+                try {
+                    x = Integer.parseInt(parts[1].trim());
+                    y = Integer.parseInt(parts[2].trim());
+                } catch (NumberFormatException ignored) {
+                    continue;
+                }
 
                 switch (element) {
                     case "hudX":
@@ -644,7 +658,7 @@ public class HUD extends Module {
         writeHudPositions(buildHudDataString());
     }
 
-    private void resetAllPositions() {
+    public static void resetAllPositions() {
         hudX = 5;
         hudY = 70;
         watermarkX = 5;
@@ -653,5 +667,9 @@ public class HUD extends Module {
         keybindsY = 50;
         targetHUDX = 100;
         targetHUDY = 100;
+        keystrokesmod.client.module.modules.render.Radar.radarX = 10;
+        keystrokesmod.client.module.modules.render.Radar.radarY = 120;
+        positionMode = Utils.HUD.PositionMode.UPLEFT;
+        e = false;
     }
 }

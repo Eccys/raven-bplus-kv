@@ -6,6 +6,7 @@ import com.google.common.eventbus.Subscribe;
 
 
 
+import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.GameLoopEvent;
 
 import keystrokesmod.client.event.impl.LookEvent;
@@ -179,10 +180,12 @@ public class Scaffold extends Module {
     }
 
     @Subscribe
-    public void onRenderWorld(RenderWorldLastEvent event) {
+    public void onRenderWorld(ForgeEvent fe) {
+        if (!(fe.getEvent() instanceof RenderWorldLastEvent)) return;
         if (!render.isToggled() || targetBlock == null) return;
         if (!Utils.Player.isPlayerInGame()) return;
 
+        RenderWorldLastEvent event = (RenderWorldLastEvent) fe.getEvent();
         // Render target block
         renderBlock(targetBlock, event.partialTicks);
     }

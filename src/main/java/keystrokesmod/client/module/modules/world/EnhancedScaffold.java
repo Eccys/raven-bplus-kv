@@ -306,13 +306,14 @@ public class EnhancedScaffold extends Module {
         );
     }
 
-    private EnumFacing getSideToPlace(BlockPos from, BlockPos to) {
-        if (to.up().equals(from)) return EnumFacing.UP;
-        if (to.down().equals(from)) return EnumFacing.DOWN;
-        if (to.north().equals(from)) return EnumFacing.NORTH;
-        if (to.south().equals(from)) return EnumFacing.SOUTH;
-        if (to.east().equals(from)) return EnumFacing.EAST;
-        if (to.west().equals(from)) return EnumFacing.WEST;
+    public static EnumFacing getSideToPlace(BlockPos from, BlockPos to) {
+        if (from == null || to == null) return null;
+        if (from.up().equals(to)) return EnumFacing.UP;
+        if (from.down().equals(to)) return EnumFacing.DOWN;
+        if (from.north().equals(to)) return EnumFacing.NORTH;
+        if (from.south().equals(to)) return EnumFacing.SOUTH;
+        if (from.east().equals(to)) return EnumFacing.EAST;
+        if (from.west().equals(to)) return EnumFacing.WEST;
         return null;
     }
 
@@ -398,11 +399,10 @@ public class EnhancedScaffold extends Module {
     }
 
     private boolean canPlaceBlock(BlockPos pos, EnumFacing side) {
-        if (mc.theWorld.getBlockState(pos).getBlock().isFullCube()) {
-            return true;
+        Block block = mc.theWorld.getBlockState(pos).getBlock();
+        if (block == null || block == Blocks.air || block.getMaterial().isLiquid()) {
+            return false;
         }
-        
-        // Check if we can place on this side
         BlockPos offsetPos = pos.offset(side);
         return mc.theWorld.isAirBlock(offsetPos);
     }
@@ -509,9 +509,16 @@ public class EnhancedScaffold extends Module {
         float targetPitch = (float) (-Math.toDegrees(Math.atan2(dy, distance)));
         
         // Smooth rotation
-        float speed = (float) rotationSpeed.getInput();
-        yaw = mc.thePlayer.rotationYaw + MathHelper.wrapAngleTo180_float(targetYaw - mc.thePlayer.rotationYaw) * speed / 180.0f;
-        pitch = mc.thePlayer.rotationPitch + MathHelper.wrapAngleTo180_float(targetPitch - mc.thePlayer.rotationPitch) * speed / 180.0f;
+        float maxStep = (float) rotationSpeed.getInput();
+        if (maxStep > 0f && maxStep < 180f) {
+            float yawDiff = MathHelper.wrapAngleTo180_float(targetYaw - yaw);
+            float pitchDiff = MathHelper.wrapAngleTo180_float(targetPitch - pitch);
+            yaw += MathHelper.clamp_float(yawDiff, -maxStep, maxStep);
+            pitch = MathHelper.clamp_float(pitch + MathHelper.clamp_float(pitchDiff, -maxStep, maxStep), -90.0f, 90.0f);
+        } else {
+            yaw = targetYaw;
+            pitch = MathHelper.clamp_float(targetPitch, -90.0f, 90.0f);
+        }
     }
 
     private void updateBlockCount() {

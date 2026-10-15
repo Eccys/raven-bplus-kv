@@ -336,6 +336,27 @@ public class RavenCoreTest {
         assertEquals(190, keystrokesmod.client.module.modules.render.Radar.radarY);
         assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPRIGHT,
                 keystrokesmod.client.module.modules.HUD.positionMode);
+
+        // Malformed coordinate entry should be skipped without aborting valid entries
+        keystrokesmod.client.module.modules.HUD.parseHudDataString("hudX,bad,34;watermarkX,77,88;");
+        assertEquals(12, keystrokesmod.client.module.modules.HUD.hudX);
+        assertEquals(77, keystrokesmod.client.module.modules.HUD.watermarkX);
+        assertEquals(88, keystrokesmod.client.module.modules.HUD.watermarkY);
+
+        // setHudX / setHudY and resetAllPositions must invalidate e and reset positionMode / Radar
+        keystrokesmod.client.module.modules.HUD.e = true;
+        keystrokesmod.client.module.modules.HUD.setHudX(300);
+        assertFalse(keystrokesmod.client.module.modules.HUD.e);
+
+        keystrokesmod.client.module.modules.HUD.e = true;
+        keystrokesmod.client.module.modules.HUD.resetAllPositions();
+        assertFalse(keystrokesmod.client.module.modules.HUD.e);
+        assertEquals(5, keystrokesmod.client.module.modules.HUD.hudX);
+        assertEquals(70, keystrokesmod.client.module.modules.HUD.hudY);
+        assertEquals(10, keystrokesmod.client.module.modules.render.Radar.radarX);
+        assertEquals(120, keystrokesmod.client.module.modules.render.Radar.radarY);
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPLEFT,
+                keystrokesmod.client.module.modules.HUD.positionMode);
     }
 
     @Test
@@ -351,7 +372,10 @@ public class RavenCoreTest {
         int kopamed1 = keystrokesmod.client.utils.Utils.Client.kopamedColoursDraw(0, 5);
         int kopamed2 = keystrokesmod.client.utils.Utils.Client.kopamedColoursDraw(5, 0);
         int astolfoZeroSpeed = keystrokesmod.client.utils.Utils.Client.astolfoColorsDraw(0, 10, 0.0f);
+        int rainbowZeroSpeed = keystrokesmod.client.utils.Utils.Client.rainbowDraw(0L, 0L);
+        int rainbowLargeSpeed = keystrokesmod.client.utils.Utils.Client.rainbowDraw(50000L, -999999999L);
         assertTrue(kopamed1 != 0 || kopamed2 != 0 || astolfoZeroSpeed != 0);
+        assertTrue(rainbowZeroSpeed != 0 || rainbowLargeSpeed != 0);
     }
 
     @Test
@@ -388,6 +412,8 @@ public class RavenCoreTest {
 
         assertEquals("https://api.paste.ee/v1/pastes/abcde",
                 keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("https://paste.ee/p/abcde"));
+        assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("https://paste.ee/p/"));
+        assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("/"));
         assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste(null));
         assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("   "));
     }
@@ -406,6 +432,10 @@ public class RavenCoreTest {
         int[] bridge = keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
                 validJson, keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.BRIDGE);
         assertArrayEquals(new int[]{45, 5, 9}, bridge);
+
+        // Null DuelsStatsMode must not throw NullPointerException
+        assertArrayEquals(new int[]{0, 0, 0},
+                keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(validJson, null));
 
         // Nicked / null player / malformed JSON handling
         assertArrayEquals(new int[]{-1, 0, 0}, keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
@@ -456,12 +486,31 @@ public class RavenCoreTest {
                 keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("   Opponent: Technoblade  "));
         assertEquals("Technoblade",
                 keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("   Opponent: [MVP+] Technoblade  "));
+        assertEquals("Technoblade",
+                keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("[12:34:56] Opponent: Technoblade"));
+        assertEquals("Technoblade",
+                keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("[12:34:56] Opponent: [MVP+] Technoblade"));
         assertEquals("Player123",
                 keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent:Player123"));
         assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent: [VIP]   "));
         assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent:   "));
         assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Random chat message"));
         assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName(null));
+    }
+
+    @Test
+    public void testEnhancedScaffoldSideToPlaceDirectionality() {
+        net.minecraft.util.BlockPos target = new net.minecraft.util.BlockPos(10, 64, 10);
+        for (net.minecraft.util.EnumFacing dir : net.minecraft.util.EnumFacing.values()) {
+            net.minecraft.util.BlockPos supportBlock = target.offset(dir);
+            net.minecraft.util.EnumFacing placeFace =
+                    keystrokesmod.client.module.modules.world.EnhancedScaffold.getSideToPlace(supportBlock, target);
+            assertNotNull("Adjacent support block must yield a valid placement face", placeFace);
+            assertEquals("Clicking supportBlock on placeFace must offset to target",
+                    target, supportBlock.offset(placeFace));
+        }
+        assertNull(keystrokesmod.client.module.modules.world.EnhancedScaffold.getSideToPlace(target, target));
+        assertNull(keystrokesmod.client.module.modules.world.EnhancedScaffold.getSideToPlace(null, target));
     }
 
     @Test

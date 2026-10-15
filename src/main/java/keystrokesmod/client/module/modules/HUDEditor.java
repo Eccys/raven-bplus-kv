@@ -9,6 +9,7 @@ import keystrokesmod.client.module.Module;
 import keystrokesmod.client.module.modules.render.Radar;
 import keystrokesmod.client.module.setting.impl.DescriptionSetting;
 import keystrokesmod.client.utils.RenderUtils;
+import keystrokesmod.client.utils.Utils;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
@@ -82,6 +83,10 @@ public class HUDEditor extends Module {
                 public void updatePosition(int newX, int newY) {
                     HUD.hudX = newX;
                     HUD.hudY = newY;
+                    if (mc != null && mc.displayWidth > 0 && mc.displayHeight > 0) {
+                        ScaledResolution sr = new ScaledResolution(mc);
+                        HUD.positionMode = Utils.HUD.getPostitionMode(newX, newY, sr.getScaledWidth(), sr.getScaledHeight());
+                    }
                     HUD.e = false;
                 }
             });
@@ -321,16 +326,7 @@ public class HUDEditor extends Module {
         @Override
         public void actionPerformed(GuiButton button) {
             if (button == resetAllButton) {
-                HUD.hudX = 5;
-                HUD.hudY = 70;
-                HUD.e = false;
-                HUD.watermarkX = 5;
-                HUD.watermarkY = 5;
-                HUD.keybindsX = 5;
-                HUD.keybindsY = 50;
-                HUD.resetTargetHUDPosition();
-                Radar.radarX = 10;
-                Radar.radarY = 120;
+                HUD.resetAllPositions();
                 initializeElements();
             } else if (button == saveButton) {
                 HUD.savePositions();

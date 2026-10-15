@@ -131,7 +131,7 @@ public class EntityESP extends Module {
     }
 
     private boolean shouldRenderEntity(Entity entity) {
-        if (entity == mc.thePlayer) return false;
+        if (entity == null || entity == mc.thePlayer) return false;
         
         // Filter invisible entities
         if (filterInvisible.isToggled() && entity.isInvisible()) return false;
@@ -139,20 +139,23 @@ public class EntityESP extends Module {
         // Filter bots
         if (entity instanceof EntityPlayer && AntiBot.bot((EntityPlayer) entity)) return false;
         
-        // Check entity type filters
-        if (entity instanceof EntityPlayer && !showPlayers.isToggled()) return false;
-        if (entity instanceof EntityMob && !showMobs.isToggled()) return false;
-        if (entity instanceof EntityAnimal && !showAnimals.isToggled()) return false;
-        if (entity instanceof EntityItem && !showItems.isToggled()) return false;
-        if (entity instanceof EntityArrow || entity instanceof EntityFireball) {
-            if (!showProjectiles.isToggled()) return false;
+        // Hostile/Passive filters
+        if (onlyHostile.isToggled() || onlyPassive.isToggled()) {
+            boolean matchesHostile = onlyHostile.isToggled() && entity instanceof EntityMob;
+            boolean matchesPassive = onlyPassive.isToggled() && entity instanceof EntityAnimal;
+            if (!matchesHostile && !matchesPassive) {
+                return false;
+            }
         }
         
-        // Hostile/Passive filters
-        if (onlyHostile.isToggled() && !(entity instanceof EntityMob)) return false;
-        if (onlyPassive.isToggled() && !(entity instanceof EntityAnimal)) return false;
+        // Check entity type filters
+        if (entity instanceof EntityPlayer) return showPlayers.isToggled();
+        if (entity instanceof EntityMob) return showMobs.isToggled();
+        if (entity instanceof EntityAnimal) return showAnimals.isToggled();
+        if (entity instanceof EntityItem) return showItems.isToggled();
+        if (entity instanceof EntityArrow || entity instanceof EntityFireball) return showProjectiles.isToggled();
         
-        return true;
+        return false;
     }
 
     private int getEntityColor(Entity entity) {

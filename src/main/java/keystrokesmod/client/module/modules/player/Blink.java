@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.eventbus.Subscribe;
 
+import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.PacketEvent;
 import keystrokesmod.client.event.impl.TickEvent;
 import keystrokesmod.client.event.impl.Render2DEvent;
@@ -22,6 +23,7 @@ import net.minecraft.network.play.client.C03PacketPlayer;
 import net.minecraft.network.play.client.C0APacketAnimation;
 import net.minecraft.network.play.client.C07PacketPlayerDigging;
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 
 public class Blink extends Module {
 
@@ -35,7 +37,7 @@ public class Blink extends Module {
     private long lastReleaseTime = 0;
     private int packetCount = 0;
     private long startTime = 0;
-    private boolean releasing = false;
+    private volatile boolean releasing = false;
     
     public enum BlinkMode {
         NORMAL,     // Buffer all packets
@@ -55,6 +57,18 @@ public class Blink extends Module {
         this.registerSetting(maxPackets = new SliderSetting("Max Packets", 100, 10, 500, 10));
         this.registerSetting(releaseDelay = new SliderSetting("Release Delay (ms)", 100, 0, 1000, 50));
         this.registerSetting(packetLimit = new SliderSetting("Packet Limit", 200, 50, 1000, 50));
+    }
+
+    @Subscribe
+    public void onForgeEvent(ForgeEvent fe) {
+        if (fe.getEvent() instanceof EntityJoinWorldEvent) {
+            EntityJoinWorldEvent joinEvent = (EntityJoinWorldEvent) fe.getEvent();
+            if (mc.thePlayer != null && joinEvent.entity == mc.thePlayer) {
+                packets.clear();
+                packetCount = 0;
+                lastReleaseTime = System.currentTimeMillis();
+            }
+        }
     }
     
     @Subscribe
@@ -81,7 +95,13 @@ public class Blink extends Module {
     
     @Subscribe
     public void onTickEvent(TickEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (!Utils.Player.isPlayerInGame()) {
+            if (!packets.isEmpty()) {
+                packets.clear();
+                packetCount = 0;
+            }
+            return;
+        }
         
         if (autoRelease.isToggled()) {
             long currentTime = System.currentTimeMillis();
@@ -115,17 +135,28 @@ public class Blink extends Module {
     }
     
     private boolean shouldBufferPacket(Packet<?> packet) {
+        boolean isMovement = packet instanceof C03PacketPlayer;
+        boolean isCombat = packet instanceof C0APacketAnimation || 
+                           packet instanceof C07PacketPlayerDigging ||
+                           packet instanceof C08PacketPlayerBlockPlacement;
+
+        if (onlyMovement.isToggled() || onlyAttacks.isToggled()) {
+            boolean matchMove = onlyMovement.isToggled() && isMovement;
+            boolean matchCombat = onlyAttacks.isToggled() && isCombat;
+            if (!matchMove && !matchCombat) {
+                return false;
+            }
+        }
+
         BlinkMode currentMode = (BlinkMode) mode.getMode();
         
         switch (currentMode) {
             case NORMAL:
                 return true;
             case MOVEMENT:
-                return packet instanceof C03PacketPlayer;
+                return isMovement;
             case COMBAT:
-                return packet instanceof C0APacketAnimation || 
-                       packet instanceof C07PacketPlayerDigging ||
-                       packet instanceof C08PacketPlayerBlockPlacement;
+                return isCombat;
             case SMART:
                 return isImportantPacket(packet);
             default:
@@ -171,6 +202,7 @@ public class Blink extends Module {
         packets.clear();
         packetCount = 0;
         lastReleaseTime = 0;
+        releasing = false;
         startTime = System.currentTimeMillis();
     }
     

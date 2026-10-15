@@ -634,8 +634,10 @@ public class Utils {
         }
 
         public static int rainbowDraw(long speed, long... delay) {
-            long time = System.currentTimeMillis() + (delay.length > 0 ? delay[0] : 0L);
-            return Color.getHSBColor((float) (time % (15000L / speed)) / (15000.0F / (float) speed), 1.0F, 1.0F)
+            long safeSpeed = speed <= 0L ? 1L : speed;
+            long cycle = Math.max(1L, 15000L / safeSpeed);
+            long time = System.currentTimeMillis() + (delay != null && delay.length > 0 ? delay[0] : 0L);
+            return Color.getHSBColor((float) Math.floorMod(time, cycle) / (float) cycle, 1.0F, 1.0F)
                     .getRGB();
         }
 
@@ -1000,7 +1002,7 @@ public class Utils {
             if (arg == null || arg.trim().isEmpty()) {
                 return "";
             }
-            String[] parts = arg.trim().split("/");
+            String[] parts = arg.trim().split("/", -1);
             if (parts.length == 0 || parts[parts.length - 1].trim().isEmpty()) {
                 return "";
             }
@@ -1129,6 +1131,10 @@ public class Utils {
                     }
                     d = stats.getAsJsonObject("Duels");
                 } catch (Exception var8) {
+                    return s;
+                }
+
+                if (dm == null) {
                     return s;
                 }
 

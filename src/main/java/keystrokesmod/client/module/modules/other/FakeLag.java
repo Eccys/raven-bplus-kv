@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.eventbus.Subscribe;
 
+import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.PacketEvent;
 import keystrokesmod.client.event.impl.TickEvent;
 import keystrokesmod.client.module.Module;
@@ -20,6 +21,7 @@ import net.minecraft.network.play.client.C03PacketPlayer;
 import net.minecraft.network.play.client.C0APacketAnimation;
 import net.minecraft.network.play.client.C07PacketPlayerDigging;
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 
 public class FakeLag extends Module {
     
@@ -33,7 +35,7 @@ public class FakeLag extends Module {
     private int packetsInQueue = 0;
     private long lagStartTime = 0;
     private boolean isLagging = false;
-    private boolean releasing = false;
+    private volatile boolean releasing = false;
     
     public enum LagMode {
         NORMAL, // Simple packet buffering
@@ -66,11 +68,25 @@ public class FakeLag extends Module {
         packetsInQueue = 0;
         lagStartTime = 0;
         isLagging = false;
+        releasing = false;
     }
 
     @Override
     public void onDisable() {
         releaseAllPackets();
+    }
+
+    @Subscribe
+    public void onForgeEvent(ForgeEvent fe) {
+        if (fe.getEvent() instanceof EntityJoinWorldEvent) {
+            EntityJoinWorldEvent joinEvent = (EntityJoinWorldEvent) fe.getEvent();
+            if (mc.thePlayer != null && joinEvent.entity == mc.thePlayer) {
+                packetQueue.clear();
+                packetsInQueue = 0;
+                isLagging = false;
+                lagStartTime = 0;
+            }
+        }
     }
 
     @Subscribe
@@ -85,10 +101,9 @@ public class FakeLag extends Module {
         // Check conditions
         if (!shouldBufferConditions(packet)) return;
         
-        // Check queue limit
+        // Check queue limit: release oldest packets first, then enqueue this packet to preserve FIFO order
         if (packetsInQueue >= maxPackets.getInput()) {
-            releasePackets((int) releaseRate.getInput());
-            return;
+            releasePackets(Math.max(1, (int) releaseRate.getInput()));
         }
         
         // Buffer the packet
@@ -109,7 +124,15 @@ public class FakeLag extends Module {
 
     @Subscribe
     public void onTickEvent(TickEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (!Utils.Player.isPlayerInGame()) {
+            if (!packetQueue.isEmpty() || isLagging) {
+                packetQueue.clear();
+                packetsInQueue = 0;
+                isLagging = false;
+                lagStartTime = 0;
+            }
+            return;
+        }
         
         long currentTime = System.currentTimeMillis();
         LagMode currentMode = (LagMode) mode.getMode();
@@ -143,20 +166,12 @@ public class FakeLag extends Module {
     }
 
     private boolean shouldBufferConditions(Packet<?> packet) {
-        // Check if we should only buffer on specific actions
-        if (onlyOnAttack.isToggled() && !(packet instanceof C0APacketAnimation)) {
-            return false;
+        if (!onlyOnAttack.isToggled() && !onlyOnBreak.isToggled() && !onlyOnPlace.isToggled()) {
+            return true;
         }
-        
-        if (onlyOnBreak.isToggled() && !(packet instanceof C07PacketPlayerDigging)) {
-            return false;
-        }
-        
-        if (onlyOnPlace.isToggled() && !(packet instanceof C08PacketPlayerBlockPlacement)) {
-            return false;
-        }
-        
-        return true;
+        return (onlyOnAttack.isToggled() && packet instanceof C0APacketAnimation) ||
+               (onlyOnBreak.isToggled() && packet instanceof C07PacketPlayerDigging) ||
+               (onlyOnPlace.isToggled() && packet instanceof C08PacketPlayerBlockPlacement);
     }
 
     private void handleNormalLag(long currentTime) {
@@ -178,21 +193,19 @@ public class FakeLag extends Module {
 
     private void handleSmoothLag(long currentTime) {
         if (isLagging) {
-            // Release packets smoothly over time
             long timeSinceStart = currentTime - lagStartTime;
-            long totalLagTime = (long) lagTime.getInput();
+            long totalLagTime = Math.max(1L, (long) lagTime.getInput());
             
             if (timeSinceStart >= totalLagTime) {
                 releaseAllPackets();
                 isLagging = false;
             } else {
-                // Calculate how many packets to release based on progress
-                double progress = (double) timeSinceStart / totalLagTime;
-                int targetRelease = (int) (packetsInQueue * progress);
-                int packetsToRelease = targetRelease - (packetsInQueue - packetQueue.size());
-                
-                if (packetsToRelease > 0) {
-                    releasePackets(packetsToRelease);
+                long remainingTime = Math.max(50L, totalLagTime - timeSinceStart);
+                int remainingTicks = Math.max(1, (int) (remainingTime / 50L));
+                int packetsToRelease = Math.max(1, packetQueue.size() / remainingTicks);
+                releasePackets(Math.min(packetsToRelease, (int) releaseRate.getInput()));
+                if (packetQueue.isEmpty()) {
+                    isLagging = false;
                 }
             }
         }

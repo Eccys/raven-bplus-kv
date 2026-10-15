@@ -8,6 +8,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.google.common.eventbus.Subscribe;
 
+import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.GameLoopEvent;
 import keystrokesmod.client.event.impl.LookEvent;
 import keystrokesmod.client.event.impl.MoveInputEvent;
@@ -204,7 +205,8 @@ public class ScaffoldPlus extends Module {
     }
 
     @Subscribe
-    public void onRenderWorld(RenderWorldLastEvent event) {
+    public void onRenderWorld(ForgeEvent fe) {
+        if (!(fe.getEvent() instanceof RenderWorldLastEvent)) return;
         if (!render.isToggled() || targetBlock == null || !Utils.Player.isPlayerInGame()) return;
 
         double x = targetBlock.getX() - mc.getRenderManager().viewerPosX;
