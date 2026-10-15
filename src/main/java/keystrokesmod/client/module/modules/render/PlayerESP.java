@@ -55,6 +55,7 @@ public class PlayerESP extends Module {
         this.registerSetting(f = new TickSetting("Show invis", true));
         this.registerSetting(h = new TickSetting("Red on damage", true));
         this.registerSetting(t7 = new TickSetting("Match Chestplate", false));
+        this.rgb_c = rgb.getRGB();
     }
 
     public void onDisable() {
@@ -62,13 +63,14 @@ public class PlayerESP extends Module {
     }
 
     public void guiUpdate() {
-        this.rgb_c = (new Color(rgb.getRed(), rgb.getGreen(), rgb.getBlue()).getRGB());
+        this.rgb_c = rgb.getRGB();
     }
 
     @Subscribe
     public void onForgeEvent(ForgeEvent fe) {
         if (fe.getEvent() instanceof RenderWorldLastEvent) {
             if (Utils.Player.isPlayerInGame()) {
+                this.rgb_c = rgb.getRGB();
                 int rgb = d.isToggled() ? 0 : this.rgb_c;
                 Iterator var3;
                 if (Raven.debugger) {

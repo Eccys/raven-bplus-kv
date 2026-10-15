@@ -1,11 +1,14 @@
 package keystrokesmod.client.module.modules.movement;
 
 import com.google.common.eventbus.Subscribe;
+import keystrokesmod.client.clickgui.kv.KvCompactGui;
 import keystrokesmod.client.clickgui.raven.ClickGui;
+import keystrokesmod.client.clickgui.raven.ModernClickGui;
 import keystrokesmod.client.event.impl.TickEvent;
 import keystrokesmod.client.module.Module;
 import keystrokesmod.client.module.setting.impl.DescriptionSetting;
 import keystrokesmod.client.module.setting.impl.TickSetting;
+import keystrokesmod.client.utils.Utils;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.settings.KeyBinding;
@@ -27,12 +30,16 @@ public class InvMove extends Module {
 
     @Subscribe
     public void onTick(TickEvent e) {
+        if (!Utils.Player.isPlayerInGame()) return;
         if (mc.currentScreen != null) {
             if (mc.currentScreen instanceof GuiChat) {
                 return;
             }
 
-            if (undetectable.isToggled() && !(mc.currentScreen instanceof ClickGui))
+            boolean isClickGui = (mc.currentScreen instanceof ClickGui)
+                    || (mc.currentScreen instanceof ModernClickGui)
+                    || (mc.currentScreen instanceof KvCompactGui);
+            if (undetectable.isToggled() && !isClickGui)
                 return;
 
             KeyBinding.setKeyBindState(mc.gameSettings.keyBindForward.getKeyCode(),
@@ -48,12 +55,12 @@ public class InvMove extends Module {
             EntityPlayerSP var1;
             if (Keyboard.isKeyDown(208) && mc.thePlayer.rotationPitch < 90.0F) {
                 var1 = mc.thePlayer;
-                var1.rotationPitch += 6.0F;
+                var1.rotationPitch = Math.min(90.0F, var1.rotationPitch + 6.0F);
             }
 
             if (Keyboard.isKeyDown(200) && mc.thePlayer.rotationPitch > -90.0F) {
                 var1 = mc.thePlayer;
-                var1.rotationPitch -= 6.0F;
+                var1.rotationPitch = Math.max(-90.0F, var1.rotationPitch - 6.0F);
             }
 
             if (Keyboard.isKeyDown(205)) {

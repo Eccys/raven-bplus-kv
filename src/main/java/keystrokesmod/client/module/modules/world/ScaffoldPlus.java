@@ -54,13 +54,23 @@ public class ScaffoldPlus extends Module {
 
     @Override
     public void onEnable() {
-        startY = mc.thePlayer != null ? Math.floor(mc.thePlayer.posY) : 0;
+        if (mc.thePlayer != null) {
+            startY = Math.floor(mc.thePlayer.posY);
+            yaw = mc.thePlayer.rotationYaw;
+            pitch = mc.thePlayer.rotationPitch;
+        } else {
+            startY = 0;
+        }
+        targetBlock = null;
         super.onEnable();
     }
 
     @Override
     public void onDisable() {
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
+        targetBlock = null;
+        if (mc.gameSettings != null && mc.gameSettings.keyBindSneak != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
+        }
         super.onDisable();
     }
 
@@ -188,6 +198,7 @@ public class ScaffoldPlus extends Module {
 
     @Subscribe
     public void onRender2D(Render2DEvent e) {
+        if (!Utils.Player.isPlayerInGame()) return;
         ScaledResolution sr = new ScaledResolution(mc);
         FontUtil.normal.drawCenteredSmoothString(blockCount + " blocks", (int) (sr.getScaledWidth() / 2f), (int) (sr.getScaledHeight() / 2f + 15), blockCount <= 16 ? 0xff0000 : -1);
     }

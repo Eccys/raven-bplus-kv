@@ -24,10 +24,23 @@ public class AutoBlock extends Module {
         this.registerSetting(chance = new SliderSetting("Chance %", 100, 0, 100, 1));
     }
 
+    @Override
+    public void onDisable() {
+        if (engaged) {
+            engaged = false;
+            release();
+        }
+    }
+
     @Subscribe
     public void onRender(Render2DEvent e) {
-        if (!Utils.Player.isPlayerInGame() || !Utils.Player.isPlayerHoldingSword())
+        if (!Utils.Player.isPlayerInGame() || !Utils.Player.isPlayerHoldingSword()) {
+            if (engaged) {
+                engaged = false;
+                release();
+            }
             return;
+        }
 
         if (engaged) {
             if ((engagedTime.hasFinished() || !Mouse.isButtonDown(0))

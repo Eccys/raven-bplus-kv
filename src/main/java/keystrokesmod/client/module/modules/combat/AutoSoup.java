@@ -53,13 +53,23 @@ public class AutoSoup extends Module {
         }
     }
 
+    @Override
+    public void onDisable() {
+        if (Utils.Player.isPlayerInGame() && (state == State.SWITCHED || state == State.SWITCHEDANDCLICKED || state == State.SWITCHEDANDDROPPED)) {
+            mc.thePlayer.inventory.currentItem = originalSlot;
+        }
+        state = State.WAITINGTOSWITCH;
+        inInv = false;
+        sortedSlots.clear();
+    }
+
     @Subscribe
     public void update(UpdateEvent e) {
         if(!Utils.Player.isPlayerInGame())
             return;
         if(
         		(invConsume.isToggled() || (mc.currentScreen == null))
-        		&& (mc.thePlayer.getHealth() < health.getInput()) && cd.hasFinished()
+        		&& ((mc.thePlayer.getHealth() < health.getInput()) || state != State.WAITINGTOSWITCH) && cd.hasFinished()
         		) {
             switch(state) {
                 case WAITINGTOSWITCH:
@@ -67,7 +77,10 @@ public class AutoSoup extends Module {
                     break;
                 case NONE:
                     int slot = getSoupSlot();
-                    if(slot == -1 ) return;
+                    if(slot == -1 ) {
+                        state = State.WAITINGTOSWITCH;
+                        return;
+                    }
                     originalSlot = mc.thePlayer.inventory.currentItem;
                     mc.thePlayer.inventory.currentItem = slot;
 

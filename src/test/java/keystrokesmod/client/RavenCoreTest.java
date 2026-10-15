@@ -172,4 +172,313 @@ public class RavenCoreTest {
         combo.resetToDefaults();
         assertEquals(SampleMode.FIRST, combo.getMode());
     }
+
+    @Test
+    public void testRGBSettingResetClampAndJsonRoundTrip() {
+        keystrokesmod.client.module.setting.impl.RGBSetting rgb =
+                new keystrokesmod.client.module.setting.impl.RGBSetting("Color", 10, 20, 30);
+        assertEquals(10, rgb.getRed());
+        assertEquals(20, rgb.getGreen());
+        assertEquals(30, rgb.getBlue());
+        int defaultPacked = new java.awt.Color(10, 20, 30).getRGB();
+        assertEquals(defaultPacked, rgb.getRGB());
+
+        // setColors clamps out-of-range values and updates packed RGB
+        rgb.setColors(new int[]{300, -15, 128});
+        assertEquals(255, rgb.getRed());
+        assertEquals(0, rgb.getGreen());
+        assertEquals(128, rgb.getBlue());
+        assertEquals(new java.awt.Color(255, 0, 128).getRGB(), rgb.getRGB());
+
+        // resetToDefaults must not throw ArrayIndexOutOfBoundsException and must restore packed RGB
+        rgb.resetToDefaults();
+        assertEquals(10, rgb.getRed());
+        assertEquals(20, rgb.getGreen());
+        assertEquals(30, rgb.getBlue());
+        assertEquals(defaultPacked, rgb.getRGB());
+
+        // JSON round-trip and malformed JSON resilience
+        rgb.setColor(0, 100);
+        rgb.setColor(1, 150);
+        rgb.setColor(2, 200);
+        JsonObject saved = rgb.getConfigAsJson();
+        rgb.resetToDefaults();
+        rgb.applyConfigFromJson(saved);
+        assertEquals(100, rgb.getRed());
+        assertEquals(150, rgb.getGreen());
+        assertEquals(200, rgb.getBlue());
+        assertEquals(new java.awt.Color(100, 150, 200).getRGB(), rgb.getRGB());
+
+        rgb.applyConfigFromJson(null);
+        rgb.applyConfigFromJson(new JsonObject());
+        assertEquals(100, rgb.getRed());
+    }
+
+    @Test
+    public void testSliderSettingRoundingClampAndReset() {
+        keystrokesmod.client.module.setting.impl.SliderSetting slider =
+                new keystrokesmod.client.module.setting.impl.SliderSetting("Reach", 3.2, 3.0, 6.0, 0.05);
+        assertEquals(3.2, slider.getInput(), 1e-6);
+
+        slider.setValue(9.5);
+        assertEquals(6.0, slider.getInput(), 1e-6);
+
+        slider.setValue(1.0);
+        assertEquals(3.0, slider.getInput(), 1e-6);
+
+        JsonObject json = slider.getConfigAsJson();
+        assertEquals("slider", json.get("type").getAsString());
+        json.addProperty("value", 4.45);
+        slider.applyConfigFromJson(json);
+        assertEquals(4.45, slider.getInput(), 1e-6);
+
+        slider.resetToDefaults();
+        assertEquals(3.2, slider.getInput(), 1e-6);
+    }
+
+    @Test
+    public void testTickSettingAndDescriptionSettingJsonRoundTrip() {
+        keystrokesmod.client.module.setting.impl.TickSetting tick =
+                new keystrokesmod.client.module.setting.impl.TickSetting("Silent", false);
+        assertFalse(tick.isToggled());
+        tick.enable();
+        assertTrue(tick.isToggled());
+
+        JsonObject json = tick.getConfigAsJson();
+        assertTrue(json.get("value").getAsBoolean());
+
+        tick.resetToDefaults();
+        assertFalse(tick.isToggled());
+
+        tick.applyConfigFromJson(json);
+        assertTrue(tick.isToggled());
+
+        keystrokesmod.client.module.setting.impl.DescriptionSetting desc =
+                new keystrokesmod.client.module.setting.impl.DescriptionSetting("Info text");
+        assertEquals("Info text", desc.getDesc());
+        desc.setDesc("Modified");
+        desc.resetToDefaults();
+        assertEquals("Info text", desc.getDesc());
+    }
+
+    @Test
+    public void testHudPositionModeQuadrantsAndMidpoints() {
+        double width = 800.0;
+        double height = 600.0;
+
+        // Top-left quadrant (marginX <= width/2, marginY <= height/2)
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPLEFT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(100, 150, width, height));
+
+        // Bottom-left quadrant (marginX <= width/2, marginY > height/2)
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.DOWNLEFT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(100, 450, width, height));
+
+        // Top-right quadrant (marginX > width/2, marginY <= height/2)
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPRIGHT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(700, 150, width, height));
+
+        // Bottom-right quadrant (marginX > width/2, marginY > height/2)
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.DOWNRIGHT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(700, 450, width, height));
+
+        // Exact center and midpoint boundaries (never returns null)
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPLEFT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(400, 200, width, height));
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.DOWNLEFT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(400, 400, width, height));
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPLEFT,
+                keystrokesmod.client.utils.Utils.HUD.getPostitionMode(400, 300, width, height));
+    }
+
+    @Test
+    public void testHudCoordinatesStringSerializationRoundTrip() {
+        keystrokesmod.client.module.modules.HUD.hudX = 12;
+        keystrokesmod.client.module.modules.HUD.hudY = 34;
+        keystrokesmod.client.module.modules.HUD.watermarkX = 56;
+        keystrokesmod.client.module.modules.HUD.watermarkY = 78;
+        keystrokesmod.client.module.modules.HUD.keybindsX = 90;
+        keystrokesmod.client.module.modules.HUD.keybindsY = 112;
+        keystrokesmod.client.module.modules.HUD.targetHUDX = 134;
+        keystrokesmod.client.module.modules.HUD.targetHUDY = 156;
+        keystrokesmod.client.module.modules.render.Radar.radarX = 178;
+        keystrokesmod.client.module.modules.render.Radar.radarY = 190;
+        keystrokesmod.client.module.modules.HUD.positionMode =
+                keystrokesmod.client.utils.Utils.HUD.PositionMode.UPRIGHT;
+
+        String serialized = keystrokesmod.client.module.modules.HUD.buildHudDataString();
+
+        // Corrupt in-memory values before restoring
+        keystrokesmod.client.module.modules.HUD.hudX = 0;
+        keystrokesmod.client.module.modules.HUD.hudY = 0;
+        keystrokesmod.client.module.modules.HUD.watermarkX = 0;
+        keystrokesmod.client.module.modules.HUD.watermarkY = 0;
+        keystrokesmod.client.module.modules.HUD.keybindsX = 0;
+        keystrokesmod.client.module.modules.HUD.keybindsY = 0;
+        keystrokesmod.client.module.modules.HUD.targetHUDX = 0;
+        keystrokesmod.client.module.modules.HUD.targetHUDY = 0;
+        keystrokesmod.client.module.modules.render.Radar.radarX = 0;
+        keystrokesmod.client.module.modules.render.Radar.radarY = 0;
+        keystrokesmod.client.module.modules.HUD.positionMode =
+                keystrokesmod.client.utils.Utils.HUD.PositionMode.DOWNLEFT;
+
+        keystrokesmod.client.module.modules.HUD.parseHudDataString(serialized);
+
+        assertEquals(12, keystrokesmod.client.module.modules.HUD.hudX);
+        assertEquals(34, keystrokesmod.client.module.modules.HUD.hudY);
+        assertEquals(56, keystrokesmod.client.module.modules.HUD.watermarkX);
+        assertEquals(78, keystrokesmod.client.module.modules.HUD.watermarkY);
+        assertEquals(90, keystrokesmod.client.module.modules.HUD.keybindsX);
+        assertEquals(112, keystrokesmod.client.module.modules.HUD.keybindsY);
+        assertEquals(134, keystrokesmod.client.module.modules.HUD.targetHUDX);
+        assertEquals(156, keystrokesmod.client.module.modules.HUD.targetHUDY);
+        assertEquals(178, keystrokesmod.client.module.modules.render.Radar.radarX);
+        assertEquals(190, keystrokesmod.client.module.modules.render.Radar.radarY);
+        assertEquals(keystrokesmod.client.utils.Utils.HUD.PositionMode.UPRIGHT,
+                keystrokesmod.client.module.modules.HUD.positionMode);
+    }
+
+    @Test
+    public void testColorBetweenAndKopamedColoursZeroSpeedSafety() {
+        // max <= min must not throw ArithmeticException (/ by zero)
+        assertEquals(100, keystrokesmod.client.utils.Utils.Client.getColorBetween(100, 100, 10));
+        assertEquals(200, keystrokesmod.client.utils.Utils.Client.getColorBetween(200, 100, 10));
+
+        int blended = keystrokesmod.client.utils.Utils.Client.getColorBetween(20, 200, 250);
+        assertTrue(blended >= 20 && blended <= 200);
+
+        // yOffset < yTotal and yTotal == 0 must not throw ArithmeticException (/ by zero)
+        int kopamed1 = keystrokesmod.client.utils.Utils.Client.kopamedColoursDraw(0, 5);
+        int kopamed2 = keystrokesmod.client.utils.Utils.Client.kopamedColoursDraw(5, 0);
+        int astolfoZeroSpeed = keystrokesmod.client.utils.Utils.Client.astolfoColorsDraw(0, 10, 0.0f);
+        assertTrue(kopamed1 != 0 || kopamed2 != 0 || astolfoZeroSpeed != 0);
+    }
+
+    @Test
+    public void testJavaStringListAndRandomUtilitiesEdgeCases() {
+        JsonObject obj = new JsonObject();
+        obj.addProperty("num", "42");
+        obj.add("nullVal", com.google.gson.JsonNull.INSTANCE);
+
+        assertEquals(42, keystrokesmod.client.utils.Utils.Java.getValue(obj, "num"));
+        assertEquals(0, keystrokesmod.client.utils.Utils.Java.getValue(obj, "nullVal"));
+        assertEquals(0, keystrokesmod.client.utils.Utils.Java.getValue(obj, "missing"));
+        assertEquals(0, keystrokesmod.client.utils.Utils.Java.getValue(null, "num"));
+
+        assertEquals(1, keystrokesmod.client.utils.Utils.Java.indexOf("b", new String[]{"a", "b", "c"}));
+        assertEquals(-1, keystrokesmod.client.utils.Utils.Java.indexOf("z", new String[]{"a", "b"}));
+        assertEquals(-1, keystrokesmod.client.utils.Utils.Java.indexOf(null, new String[]{"a"}));
+
+        assertEquals("Raven B Plus", keystrokesmod.client.utils.Utils.Java.capitalizeWord("raven B Plus"));
+        assertEquals("", keystrokesmod.client.utils.Utils.Java.capitalizeWord(""));
+        assertEquals("", keystrokesmod.client.utils.Utils.Java.capitalizeWord(null));
+
+        assertTrue(keystrokesmod.client.utils.Utils.Java.toArrayList(null).isEmpty());
+        assertTrue(keystrokesmod.client.utils.Utils.Java.StringListToList(null).isEmpty());
+        assertEquals("", keystrokesmod.client.utils.Utils.Java.randomChoice(new String[0]));
+        assertEquals("only", keystrokesmod.client.utils.Utils.Java.randomChoice(new String[]{"only"}));
+    }
+
+    @Test
+    public void testUrlValidationAndPasteeIdExtraction() {
+        assertFalse(keystrokesmod.client.utils.Utils.URLS.isLink(null));
+        assertFalse(keystrokesmod.client.utils.Utils.URLS.isLink(""));
+        assertFalse(keystrokesmod.client.utils.Utils.URLS.isLink("ftp://example.com"));
+        assertTrue(keystrokesmod.client.utils.Utils.URLS.isLink("https://paste.ee/p/abcde"));
+
+        assertEquals("https://api.paste.ee/v1/pastes/abcde",
+                keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("https://paste.ee/p/abcde"));
+        assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste(null));
+        assertEquals("", keystrokesmod.client.utils.Utils.URLS.makeRawPasteePaste("   "));
+    }
+
+    @Test
+    public void testHypixelProfileParsingAndPlayerProfileSafety() {
+        String validJson = "{\"success\":true,\"player\":{\"displayname\":\"TestUser\",\"stats\":{\"Duels\":{"
+                + "\"wins\":120,\"losses\":30,\"current_winstreak\":15,"
+                + "\"bridge_duel_wins\":45,\"bridge_duel_losses\":5,\"current_winstreak_mode_bridge_duel\":9"
+                + "}}}}";
+
+        int[] overall = keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
+                validJson, keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.OVERALL);
+        assertArrayEquals(new int[]{120, 30, 15}, overall);
+
+        int[] bridge = keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
+                validJson, keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.BRIDGE);
+        assertArrayEquals(new int[]{45, 5, 9}, bridge);
+
+        // Nicked / null player / malformed JSON handling
+        assertArrayEquals(new int[]{-1, 0, 0}, keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
+                "{\"success\":true,\"player\":null}", keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.OVERALL));
+        assertArrayEquals(new int[]{0, 0, 0}, keystrokesmod.client.utils.Utils.Profiles.getHypixelStats(
+                "{invalid-json", keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.OVERALL));
+
+        keystrokesmod.client.utils.profile.PlayerProfile profile =
+                new keystrokesmod.client.utils.profile.PlayerProfile("TestUser",
+                        keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.BRIDGE);
+        profile.populateStatsFromJson(validJson);
+        assertFalse(profile.nicked);
+        assertEquals("TestUser", profile.inGameName);
+        assertEquals(45, profile.wins);
+        assertEquals(5, profile.losses);
+        assertEquals(9, profile.winStreak);
+
+        keystrokesmod.client.utils.profile.PlayerProfile nickedProfile =
+                new keystrokesmod.client.utils.profile.PlayerProfile("NickedUser",
+                        keystrokesmod.client.utils.Utils.Profiles.DuelsStatsMode.OVERALL);
+        nickedProfile.populateStatsFromJson("{\"success\":true, \"player\": null}");
+        assertTrue(nickedProfile.nicked);
+    }
+
+    @Test
+    public void testBowAimbotBallisticTrajectoryCalculation() {
+        // Zero horizontal distance must not produce NaN or Infinity
+        float[] zeroDist = keystrokesmod.client.module.modules.combat.BowAimbot.calculateBowAngles(
+                0.0, 5.0, 0.0, 0.0, 0.0, 20, false);
+        assertFalse(Float.isNaN(zeroDist[0]) || Float.isInfinite(zeroDist[0]));
+        assertFalse(Float.isNaN(zeroDist[1]) || Float.isInfinite(zeroDist[1]));
+        assertEquals(-90.0f, zeroDist[1], 1e-4f);
+
+        // Standard horizontal target at 20 blocks
+        float[] fullDraw = keystrokesmod.client.module.modules.combat.BowAimbot.calculateBowAngles(
+                20.0, 0.0, 0.0, 0.0, 0.0, 20, false);
+        float[] halfDraw = keystrokesmod.client.module.modules.combat.BowAimbot.calculateBowAngles(
+                20.0, 0.0, 0.0, 0.0, 0.0, 10, false);
+        assertEquals(-90.0f, fullDraw[0], 1e-3f);
+        // Half draw has lower arrow velocity, so it requires a steeper upward pitch (more negative pitch)
+        assertTrue("Half draw should aim higher (more negative pitch) than full draw", halfDraw[1] < fullDraw[1]);
+        assertTrue(halfDraw[1] >= -90.0f && halfDraw[1] <= 90.0f);
+    }
+
+    @Test
+    public void testBridgeInfoOpponentNameParsing() {
+        assertEquals("Technoblade",
+                keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("   Opponent: Technoblade  "));
+        assertEquals("Technoblade",
+                keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("   Opponent: [MVP+] Technoblade  "));
+        assertEquals("Player123",
+                keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent:Player123"));
+        assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent: [VIP]   "));
+        assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Opponent:   "));
+        assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName("Random chat message"));
+        assertNull(keystrokesmod.client.module.modules.minigames.BridgeInfo.parseOpponentName(null));
+    }
+
+    @Test
+    public void testMouseManagerClickCounterExpirationAndSeparation() {
+        keystrokesmod.client.utils.MouseManager.clearClicks();
+        assertEquals(0, keystrokesmod.client.utils.MouseManager.getLeftClickCounter());
+        assertEquals(0, keystrokesmod.client.utils.MouseManager.getRightClickCounter());
+
+        keystrokesmod.client.utils.MouseManager.addLeftClick();
+        keystrokesmod.client.utils.MouseManager.addLeftClick();
+        keystrokesmod.client.utils.MouseManager.addRightClick();
+
+        assertEquals(2, keystrokesmod.client.utils.MouseManager.getLeftClickCounter());
+        assertEquals(1, keystrokesmod.client.utils.MouseManager.getRightClickCounter());
+
+        keystrokesmod.client.utils.MouseManager.clearClicks();
+        assertEquals(0, keystrokesmod.client.utils.MouseManager.getLeftClickCounter());
+        assertEquals(0, keystrokesmod.client.utils.MouseManager.getRightClickCounter());
+    }
 }

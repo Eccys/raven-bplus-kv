@@ -96,10 +96,26 @@ public class EnhancedScaffold extends Module {
     public void onEnable() {
         blockCount = 0;
         lastPlaceTime = 0;
-        lastBlockSlot = -1;
+        lastBlockSlot = Utils.Player.isPlayerInGame() ? mc.thePlayer.inventory.currentItem : -1;
+        if (Utils.Player.isPlayerInGame()) {
+            yaw = mc.thePlayer.rotationYaw;
+            pitch = mc.thePlayer.rotationPitch;
+        }
         towerHeight = 0;
         shouldJump = false;
         lastJumpTime = 0;
+    }
+
+    @Override
+    public void onDisable() {
+        if (mc.gameSettings != null && mc.gameSettings.keyBindSneak != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
+        }
+        if (Utils.Player.isPlayerInGame() && lastBlockSlot >= 0 && lastBlockSlot < 9) {
+            mc.thePlayer.inventory.currentItem = lastBlockSlot;
+        }
+        lastBlockSlot = -1;
+        super.onDisable();
     }
 
     @Subscribe
@@ -177,22 +193,22 @@ public class EnhancedScaffold extends Module {
         
         if (!mc.theWorld.isAirBlock(under)) return;
         
-        // Find suitable position to place block
-        BlockPos[] positions = getExpandPositions(under);
+        BlockPos[] targets = getExpandPositions(under);
         BlockPos bestPos = null;
         EnumFacing bestSide = null;
+        EnumFacing[] checkDirs = {EnumFacing.DOWN, EnumFacing.NORTH, EnumFacing.SOUTH, EnumFacing.EAST, EnumFacing.WEST};
         
-        for (BlockPos pos : positions) {
-            if (mc.theWorld.isAirBlock(pos)) continue;
+        for (BlockPos target : targets) {
+            if (!mc.theWorld.isAirBlock(target)) continue;
             
-            EnumFacing[] sides = {EnumFacing.UP, EnumFacing.NORTH, EnumFacing.SOUTH, EnumFacing.EAST, EnumFacing.WEST};
-            for (EnumFacing side : sides) {
-                BlockPos adjacent = pos.offset(side);
-                if (adjacent.equals(under) && canPlaceBlock(pos, side)) {
-                    double distance = mc.thePlayer.getDistanceSq(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            for (EnumFacing dir : checkDirs) {
+                BlockPos neighbor = target.offset(dir);
+                EnumFacing placeSide = dir.getOpposite();
+                if (!mc.theWorld.isAirBlock(neighbor) && canPlaceBlock(neighbor, placeSide)) {
+                    double distance = mc.thePlayer.getDistanceSq(neighbor.getX() + 0.5, neighbor.getY() + 0.5, neighbor.getZ() + 0.5);
                     if (distance <= reach.getInput() * reach.getInput()) {
-                        bestPos = pos;
-                        bestSide = side;
+                        bestPos = neighbor;
+                        bestSide = placeSide;
                         break;
                     }
                 }
@@ -515,7 +531,7 @@ public class EnhancedScaffold extends Module {
         
         if (showBlockCount.isToggled()) {
             String countText = "Blocks: " + blockCount;
-            int color = blockCount > 16 ? 0xFFFF0000 : 0xFF00FF00;
+            int color = blockCount <= 16 ? 0xFFFF0000 : 0xFF00FF00;
             FontUtil.normal.drawString(countText, x, y, color);
             y += 12;
         }

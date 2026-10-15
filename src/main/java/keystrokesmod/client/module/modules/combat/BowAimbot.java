@@ -35,12 +35,53 @@ public class BowAimbot extends Module {
 
             if (target != null && Utils.Player.fov(target, (float) fov.getInput())) {
                 float[] rots = getBowRotations(target);
-                if (rots != null) {
+                if (rots != null && !Float.isNaN(rots[0]) && !Float.isNaN(rots[1])) {
                     mc.thePlayer.rotationYaw = rots[0];
-                    mc.thePlayer.rotationPitch = rots[1];
+                    mc.thePlayer.rotationPitch = MathHelper.clamp_float(rots[1], -90.0f, 90.0f);
                 }
             }
         }
+    }
+
+    public static float[] calculateBowAngles(double x, double y, double z, double motionX, double motionZ, int itemInUseDuration, boolean predictTarget) {
+        double bowPower = itemInUseDuration / 20.0;
+        bowPower = (bowPower * bowPower + bowPower * 2.0) / 3.0;
+        if (bowPower < 0.1) bowPower = 0.1;
+        if (bowPower > 1.0) bowPower = 1.0;
+
+        double velocity = bowPower * 3.0;
+
+        if (predictTarget) {
+            double initialDist = MathHelper.sqrt_double(x * x + z * z);
+            double time = initialDist / velocity;
+            x += motionX * time;
+            z += motionZ * time;
+        }
+
+        double dist = MathHelper.sqrt_double(x * x + z * z);
+        if (dist < 1e-4) {
+            return new float[]{0.0f, y >= 0 ? -90.0f : 90.0f};
+        }
+
+        float yaw = (float) (Math.atan2(z, x) * 180.0 / Math.PI) - 90.0f;
+
+        // Gravity compensation using actual arrow velocity
+        double v2 = velocity * velocity;
+        double v4 = v2 * v2;
+        double g = 0.05;
+        double discriminant = v4 - g * (g * dist * dist + 2.0 * y * v2);
+        double pitch;
+        if (discriminant >= 0.0) {
+            pitch = -Math.toDegrees(Math.atan((v2 - Math.sqrt(discriminant)) / (g * dist)));
+        } else {
+            pitch = -(Math.atan2(y, dist) * 180.0 / Math.PI);
+        }
+
+        if (Double.isNaN(pitch) || Double.isInfinite(pitch)) {
+            pitch = -(Math.atan2(y, dist) * 180.0 / Math.PI);
+        }
+
+        return new float[]{yaw, MathHelper.clamp_float((float) pitch, -90.0f, 90.0f)};
     }
 
     private float[] getBowRotations(Entity target) {
@@ -48,31 +89,17 @@ public class BowAimbot extends Module {
         double z = target.posZ - mc.thePlayer.posZ;
         double y = target.posY + target.getEyeHeight() - 0.1 - mc.thePlayer.posY - mc.thePlayer.getEyeHeight();
 
-        if (predict.isToggled()) {
-            double bowPower = (mc.thePlayer.getItemInUseDuration()) / 20.0;
-            bowPower = (bowPower * bowPower + bowPower * 2.0) / 3.0;
-            if (bowPower > 1.0) bowPower = 1.0;
-            
-            double dist = MathHelper.sqrt_double(x * x + z * z);
-            double velocity = bowPower * 3.0;
-            double time = dist / velocity;
-            
-            x += (target.posX - target.prevPosX) * time;
-            z += (target.posZ - target.prevPosZ) * time;
-        }
+        float[] rawAngles = calculateBowAngles(
+                x, y, z,
+                target.posX - target.prevPosX,
+                target.posZ - target.prevPosZ,
+                mc.thePlayer.getItemInUseDuration(),
+                predict.isToggled()
+        );
 
-        double dist = MathHelper.sqrt_double(x * x + z * z);
-        float yaw = (float) (Math.atan2(z, x) * 180.0 / Math.PI) - 90.0f;
-        
-        // Basic gravity compensation
-        double v = 3.0; // max bow velocity
-        double g = 0.05; // gravity
-        double pitch = -Math.toDegrees(Math.atan((Math.pow(v, 2) - Math.sqrt(Math.pow(v, 4) - g * (g * Math.pow(dist, 2) + 2 * y * Math.pow(v, 2)))) / (g * dist)));
-
-        if (Double.isNaN(pitch)) {
-            pitch = (float) (-(Math.atan2(y, dist) * 180.0 / Math.PI));
-        }
-
-        return new float[]{mc.thePlayer.rotationYaw + MathHelper.wrapAngleTo180_float(yaw - mc.thePlayer.rotationYaw), (float) pitch};
+        return new float[]{
+                mc.thePlayer.rotationYaw + MathHelper.wrapAngleTo180_float(rawAngles[0] - mc.thePlayer.rotationYaw),
+                rawAngles[1]
+        };
     }
 }

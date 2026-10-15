@@ -72,10 +72,12 @@ public class EnhancedESP extends Module {
         this.registerSetting(showInvis = new TickSetting("Show Invisible", true));
         this.registerSetting(redOnDamage = new TickSetting("Red on Damage", true));
         this.registerSetting(matchArmor = new TickSetting("Match Armor Color", false));
+        this.rgbColor = color.getRGB();
     }
 
+    @Override
     public void guiUpdate() {
-        this.rgbColor = new Color(color.getRed(), color.getGreen(), color.getBlue()).getRGB();
+        this.rgbColor = color.getRGB();
     }
 
     @Subscribe
@@ -83,7 +85,8 @@ public class EnhancedESP extends Module {
         if (fe.getEvent() instanceof RenderWorldLastEvent) {
             RenderWorldLastEvent event = (RenderWorldLastEvent) fe.getEvent();
             if (Utils.Player.isPlayerInGame()) {
-                int color = rainbow.isToggled() ? 0 : this.rgbColor;
+                this.rgbColor = color.getRGB();
+                int baseColor = rainbow.isToggled() ? Utils.Client.rainbowDraw(2L, 0L) : this.rgbColor;
                 
                 Iterator<EntityPlayer> iterator = mc.theWorld.playerEntities.iterator();
                 while (iterator.hasNext()) {
@@ -93,8 +96,8 @@ public class EnhancedESP extends Module {
                     if (!showInvis.isToggled() && player.isInvisible()) continue;
                     if (AntiBot.bot(player)) continue;
                     
-                    int entityColor = getEntityColor(player, color);
-                    renderESP(player, entityColor, Utils.Client.getTimer().renderPartialTicks);
+                    int entityColor = getEntityColor(player, baseColor);
+                    renderESP(player, entityColor, event.partialTicks);
                 }
             }
         }
@@ -267,8 +270,12 @@ public class EnhancedESP extends Module {
         drawBox(bb, r, g, b, a, width);
         
         // Add corner highlights for rounded effect
+        float hr = Math.min(1.0f, r * 1.2f);
+        float hg = Math.min(1.0f, g * 1.2f);
+        float hb = Math.min(1.0f, b * 1.2f);
+        float ha = Math.min(1.0f, a * 0.8f);
         GL11.glLineWidth(width + 1.0f);
-        GL11.glColor4f(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f);
+        GL11.glColor4f(hr, hg, hb, ha);
         
         Tessellator tessellator = Tessellator.getInstance();
         WorldRenderer worldRenderer = tessellator.getWorldRenderer();
@@ -277,17 +284,17 @@ public class EnhancedESP extends Module {
         float corner = 0.1f;
         
         // Corner lines
-        worldRenderer.pos(bb.minX, bb.minY + corner, bb.minZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
-        worldRenderer.pos(bb.minX + corner, bb.minY, bb.minZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
+        worldRenderer.pos(bb.minX, bb.minY + corner, bb.minZ).color(hr, hg, hb, ha).endVertex();
+        worldRenderer.pos(bb.minX + corner, bb.minY, bb.minZ).color(hr, hg, hb, ha).endVertex();
         
-        worldRenderer.pos(bb.maxX - corner, bb.minY, bb.minZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
-        worldRenderer.pos(bb.maxX, bb.minY + corner, bb.minZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
+        worldRenderer.pos(bb.maxX - corner, bb.minY, bb.minZ).color(hr, hg, hb, ha).endVertex();
+        worldRenderer.pos(bb.maxX, bb.minY + corner, bb.minZ).color(hr, hg, hb, ha).endVertex();
         
-        worldRenderer.pos(bb.maxX, bb.minY, bb.maxZ - corner).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
-        worldRenderer.pos(bb.maxX - corner, bb.minY, bb.maxZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
+        worldRenderer.pos(bb.maxX, bb.minY, bb.maxZ - corner).color(hr, hg, hb, ha).endVertex();
+        worldRenderer.pos(bb.maxX - corner, bb.minY, bb.maxZ).color(hr, hg, hb, ha).endVertex();
         
-        worldRenderer.pos(bb.minX + corner, bb.minY, bb.maxZ).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
-        worldRenderer.pos(bb.minX, bb.minY, bb.maxZ - corner).color(r * 1.2f, g * 1.2f, b * 1.2f, a * 0.8f).endVertex();
+        worldRenderer.pos(bb.minX + corner, bb.minY, bb.maxZ).color(hr, hg, hb, ha).endVertex();
+        worldRenderer.pos(bb.minX, bb.minY, bb.maxZ - corner).color(hr, hg, hb, ha).endVertex();
         
         tessellator.draw();
     }
@@ -299,11 +306,10 @@ public class EnhancedESP extends Module {
 
     private void renderSmoothHealthBar(EntityPlayer player, double x, double y, double z, float fadeAlpha) {
         double health = player.getHealth();
-        double maxHealth = player.getMaxHealth();
-        float healthPercent = (float) (health / maxHealth);
+        double maxHealth = Math.max(1.0, player.getMaxHealth());
+        float healthPercent = MathHelper.clamp_float((float) (health / maxHealth), 0.0f, 1.0f);
         
         float opacity = (float) healthOpacity.getInput() * fadeAlpha;
-        float width = (float) healthWidth.getInput();
         
         // Calculate health color with smooth gradient
         Color healthColor = getSmoothHealthColor(healthPercent);
@@ -323,24 +329,24 @@ public class EnhancedESP extends Module {
         
         // Draw background
         GL11.glColor4f(0.1f, 0.1f, 0.1f, opacity * 0.8f);
-        drawFilledRect(barX - barWidth/2, barY, barX + barWidth/2, barY + barHeight);
+        drawFilledRect(barX - barWidth/2, barY, barX + barWidth/2, barY + barHeight, z);
         
         // Draw health with smooth animation
         if (smoothHealth.isToggled()) {
             // Animated health bar
             double animatedHealth = getAnimatedHealth(player, healthPercent);
             GL11.glColor4f(rgb[0], rgb[1], rgb[2], opacity);
-            drawFilledRect(barX - barWidth/2, barY, barX - barWidth/2 + barWidth * animatedHealth, barY + barHeight);
+            drawFilledRect(barX - barWidth/2, barY, barX - barWidth/2 + barWidth * animatedHealth, barY + barHeight, z);
         } else {
             // Static health bar
             GL11.glColor4f(rgb[0], rgb[1], rgb[2], opacity);
-            drawFilledRect(barX - barWidth/2, barY, barX - barWidth/2 + barWidth * healthPercent, barY + barHeight);
+            drawFilledRect(barX - barWidth/2, barY, barX - barWidth/2 + barWidth * healthPercent, barY + barHeight, z);
         }
         
         // Draw border
         GL11.glLineWidth(1.0f);
         GL11.glColor4f(1.0f, 1.0f, 1.0f, opacity * 0.5f);
-        drawRectOutline(barX - barWidth/2, barY, barX + barWidth/2, barY + barHeight);
+        drawRectOutline(barX - barWidth/2, barY, barX + barWidth/2, barY + barHeight, z);
         
         // Restore state
         GL11.glEnable(GL11.GL_TEXTURE_2D);
@@ -350,19 +356,20 @@ public class EnhancedESP extends Module {
     }
 
     private Color getSmoothHealthColor(float healthPercent) {
+        healthPercent = MathHelper.clamp_float(healthPercent, 0.0f, 1.0f);
         if (healthPercent > 0.6f) {
             return new Color(0, 255, 0); // Green
         } else if (healthPercent > 0.3f) {
             // Smooth transition from green to yellow to orange
             float ratio = (healthPercent - 0.3f) / 0.3f;
-            int red = (int) (255 * (1 - ratio));
+            int red = MathHelper.clamp_int((int) (255 * (1 - ratio)), 0, 255);
             int green = 255;
             return new Color(red, green, 0);
         } else {
             // Smooth transition from orange to red
             float ratio = healthPercent / 0.3f;
             int red = 255;
-            int green = (int) (165 * ratio);
+            int green = MathHelper.clamp_int((int) (165 * ratio), 0, 255);
             return new Color(red, green, 0);
         }
     }
@@ -424,25 +431,25 @@ public class EnhancedESP extends Module {
         };
     }
 
-    private void drawFilledRect(double x1, double y1, double x2, double y2) {
+    private void drawFilledRect(double x1, double y1, double x2, double y2, double z) {
         Tessellator tessellator = Tessellator.getInstance();
         WorldRenderer worldRenderer = tessellator.getWorldRenderer();
         worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
-        worldRenderer.pos(x1, y1, 0).endVertex();
-        worldRenderer.pos(x2, y1, 0).endVertex();
-        worldRenderer.pos(x2, y2, 0).endVertex();
-        worldRenderer.pos(x1, y2, 0).endVertex();
+        worldRenderer.pos(x1, y1, z).endVertex();
+        worldRenderer.pos(x2, y1, z).endVertex();
+        worldRenderer.pos(x2, y2, z).endVertex();
+        worldRenderer.pos(x1, y2, z).endVertex();
         tessellator.draw();
     }
 
-    private void drawRectOutline(double x1, double y1, double x2, double y2) {
+    private void drawRectOutline(double x1, double y1, double x2, double y2, double z) {
         Tessellator tessellator = Tessellator.getInstance();
         WorldRenderer worldRenderer = tessellator.getWorldRenderer();
         worldRenderer.begin(GL11.GL_LINE_LOOP, DefaultVertexFormats.POSITION);
-        worldRenderer.pos(x1, y1, 0).endVertex();
-        worldRenderer.pos(x2, y1, 0).endVertex();
-        worldRenderer.pos(x2, y2, 0).endVertex();
-        worldRenderer.pos(x1, y2, 0).endVertex();
+        worldRenderer.pos(x1, y1, z).endVertex();
+        worldRenderer.pos(x2, y1, z).endVertex();
+        worldRenderer.pos(x2, y2, z).endVertex();
+        worldRenderer.pos(x1, y2, z).endVertex();
         tessellator.draw();
     }
 }

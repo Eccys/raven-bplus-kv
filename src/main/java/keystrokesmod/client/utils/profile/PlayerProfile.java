@@ -17,7 +17,7 @@ public class PlayerProfile {
     private final Utils.Profiles.DuelsStatsMode statsMode;
 
     public PlayerProfile(UUID uuid, Utils.Profiles.DuelsStatsMode mode) {
-        this.uuid = uuid.uuid;
+        this.uuid = uuid != null ? uuid.uuid : null;
         this.statsMode = mode;
     }
 
@@ -29,7 +29,7 @@ public class PlayerProfile {
     public void populateStats() {
         if (uuid == null) {
             this.uuid = Utils.Profiles.getUUIDFromName(inGameName);
-            if (uuid.isEmpty()) {
+            if (uuid == null || uuid.isEmpty()) {
                 this.isPlayer = false;
                 return;
             }
@@ -37,17 +37,39 @@ public class PlayerProfile {
 
         String textFromURL = Utils.URLS
                 .getTextFromURL("https://api.hypixel.net/player?key=" + Utils.URLS.hypixelApiKey + "&uuid=" + uuid);
-        if (textFromURL.isEmpty()) {
+        populateStatsFromJson(textFromURL);
+    }
+
+    public void populateStatsFromJson(String textFromURL) {
+        if (textFromURL == null || textFromURL.isEmpty()) {
             this.nicked = true;
         } else if (textFromURL.equals("{\"success\":true,\"player\":null}")) {
             this.nicked = true;
         } else {
             JsonObject d;
             try {
-                JsonObject pr = parseJson(textFromURL).getAsJsonObject("player");
-                this.inGameName = pr.get("displayname").getAsString();
-                d = pr.getAsJsonObject("stats").getAsJsonObject("Duels");
-            } catch (NullPointerException var8) {
+                JsonObject root = parseJson(textFromURL);
+                if (root == null || !root.has("player") || root.get("player").isJsonNull()) {
+                    this.nicked = true;
+                    return;
+                }
+                JsonObject pr = root.getAsJsonObject("player");
+                if (pr.has("displayname") && !pr.get("displayname").isJsonNull()) {
+                    this.inGameName = pr.get("displayname").getAsString();
+                }
+                if (!pr.has("stats") || pr.get("stats").isJsonNull()) {
+                    return;
+                }
+                JsonObject stats = pr.getAsJsonObject("stats");
+                if (!stats.has("Duels") || stats.get("Duels").isJsonNull()) {
+                    return;
+                }
+                d = stats.getAsJsonObject("Duels");
+            } catch (Exception var8) {
+                return;
+            }
+
+            if (statsMode == null) {
                 return;
             }
 

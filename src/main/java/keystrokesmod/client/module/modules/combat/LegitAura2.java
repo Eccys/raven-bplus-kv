@@ -67,14 +67,25 @@ public class LegitAura2 extends Module {
         this.registerSetting(fixMovement = new TickSetting("Movement Fix", true));
         this.registerSetting(sortMode = new ComboSetting("Sort mode", SortMode.Distance));
         this.registerSetting(blockMode = new ComboSetting("Block mode", BlockMode.NONE));
-        this.registerSetting(cps);
+    }
+
+    @Override
+    public void onDisable() {
+        target = null;
+        leftDown = false;
+        leftDownTime = 0L;
+        leftUpTime = 0L;
+        if (mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+        }
+        Utils.Client.setMouseButtonState(0, false);
     }
 
     @Subscribe
     public void onUpdate(UpdateEvent e) {
         if(!Utils.Player.isPlayerInGame()) {
-        	yaw = mc.thePlayer.rotationYaw;
-        	return;
+            target = null;
+            return;
         }
         Mouse.poll();
         pTargets = Utils.Player.getClosePlayers((float) rotationDistance.getInput());
@@ -103,13 +114,14 @@ public class LegitAura2 extends Module {
         prevPitch = pitch;
         float[] i = Utils.Player.getTargetRotations(target, 0);
         yaw = i[0];
-        pitch = i[1] + 4f;
+        pitch = Math.max(-90.0f, Math.min(90.0f, i[1] + 4f));
         e.setYaw(yaw);
         e.setPitch(pitch);
     }
 
     @Subscribe
     public void onTick(keystrokesmod.client.event.impl.TickEvent e) {
+        if (!Utils.Player.isPlayerInGame()) return;
         BlockMode m = (BlockMode) blockMode.getMode();
         if((m == BlockMode.FUCKY) && (mc.thePlayer.prevSwingProgress < mc.thePlayer.swingProgress))
             KeyBinding.onTick(mc.gameSettings.keyBindUseItem.getKeyCode());
@@ -118,7 +130,7 @@ public class LegitAura2 extends Module {
     @Subscribe
     public void renderWorldLast(ForgeEvent fe) {
         if((fe.getEvent() instanceof RenderWorldLastEvent) && (target != null)) {
-            int red = (int) (((20 - target.getHealth()) * 13) > 255 ? 255 : (20 - target.getHealth()) * 13);
+            int red = (int) Math.max(0, Math.min(255, (20 - target.getHealth()) * 13));
             int green =  255 - red;
             int rgb = new Color(red, green, 0).getRGB();
             Utils.HUD.drawBoxAroundEntity(target, 2, 0, 0, rgb, false);

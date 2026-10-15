@@ -647,14 +647,19 @@ public class Utils {
         }
 
         public static int getColorBetween(int min, int max, int delay) {
-            int c = (int) Math.abs((((System.currentTimeMillis() / 10) + delay) % (2 * (max - min))) - (max - min))
+            if (max <= min) {
+                return min;
+            }
+            int range = max - min;
+            int c = (int) Math.abs((((System.currentTimeMillis() / 10) + delay) % (2 * range)) - range)
                     + min;
-            // System.out.println(Math.abs((System.currentTimeMillis() % (2 * (max-min)) -
-            // (max-min))) + min);
             return c;
         }
 
         public static int astolfoColorsDraw(int yOffset, int yTotal, float speed) {
+            if (speed <= 0) {
+                speed = 2900F;
+            }
             float hue = (float) (System.currentTimeMillis() % (int) speed) + ((yTotal - yOffset) * 9);
             while (hue > speed)
                 hue -= speed;
@@ -684,12 +689,10 @@ public class Utils {
         public static int kopamedColoursDraw(int yOffset, int yTotal) {
             float speed = 6428;
             float hue;
-            try {
-                hue = (float) (System.currentTimeMillis() % (int) speed) + ((yTotal - yOffset) / (yOffset / yTotal));
-            } catch (ArithmeticException divisionByZero) {
-                hue = (float) (System.currentTimeMillis() % (int) speed)
-                        + ((yTotal - yOffset) / (((yOffset / yTotal) + 1) + 1));
-            }
+            int safeYTotal = (yTotal == 0) ? 1 : yTotal;
+            int ratio = yOffset / safeYTotal;
+            int divisor = (ratio == 0) ? 2 : ratio;
+            hue = (float) (System.currentTimeMillis() % (int) speed) + ((yTotal - yOffset) / divisor);
 
             while (hue > speed)
                 hue -= speed;
@@ -707,7 +710,11 @@ public class Utils {
                 current = 2F - (current - 2f);
             current += 2F;
 
-            return Color.HSBtoRGB((current / (current - yTotal)) + current, 1f, 1F);
+            float denom = (current - yTotal);
+            if (Math.abs(denom) < 1e-4f) {
+                denom = 1.0f;
+            }
+            return Color.HSBtoRGB((current / denom) + current, 1f, 1F);
         }
 
         public static boolean openWebpage(String url) {
@@ -802,7 +809,7 @@ public class Utils {
         }
 
         public static String reformat(String txt) {
-            return txt.replace("&", "§");
+            return txt == null ? "" : txt.replace("&", "§");
         }
     }
 
@@ -818,15 +825,21 @@ public class Utils {
 
         public static int getValue(JsonObject type, String member) {
             try {
+                if (type == null || member == null || !type.has(member) || type.get(member).isJsonNull()) {
+                    return 0;
+                }
                 return type.get(member).getAsInt();
-            } catch (NullPointerException er) {
+            } catch (Exception er) {
                 return 0;
             }
         }
 
         public static int indexOf(String key, String[] wut) {
+            if (key == null || wut == null) {
+                return -1;
+            }
             for (int o = 0; o < wut.length; o++)
-                if (wut[o].equals(key))
+                if (key.equals(wut[o]))
                     return o;
             return -1;
         }
@@ -840,13 +853,16 @@ public class Utils {
         }
 
         public static double round(double n, int d) {
-            if (d == 0)
+            if (d <= 0)
                 return (double) Math.round(n);
             double p = Math.pow(10.0D, d);
             return (double) Math.round(n * p) / p;
         }
 
         public static String str(String s) {
+            if (s == null) {
+                return "";
+            }
             char[] n = StringUtils.stripControlCodes(s).toCharArray();
             StringBuilder v = new StringBuilder();
 
@@ -858,6 +874,9 @@ public class Utils {
         }
 
         public static String capitalizeWord(String s) {
+            if (s == null || s.isEmpty()) {
+                return "";
+            }
             return s.substring(0, 1).toUpperCase() + s.substring(1);
         }
 
@@ -880,12 +899,17 @@ public class Utils {
         }
 
         public static ArrayList<String> toArrayList(String[] fakeList) {
+            if (fakeList == null) {
+                return new ArrayList<>();
+            }
             return new ArrayList<>(Arrays.asList(fakeList));
         }
 
         public static List<String> StringListToList(String[] whytho) {
             List<String> howTohackNasaWorking2021NoScamDotCom = new ArrayList<>();
-            Collections.addAll(howTohackNasaWorking2021NoScamDotCom, whytho);
+            if (whytho != null) {
+                Collections.addAll(howTohackNasaWorking2021NoScamDotCom, whytho);
+            }
             return howTohackNasaWorking2021NoScamDotCom;
         }
 
@@ -894,6 +918,9 @@ public class Utils {
         }
 
         public static String randomChoice(String[] strings) {
+            if (strings == null || strings.length == 0) {
+                return "";
+            }
             return strings[rand.nextInt(strings.length)];
         }
 
@@ -962,7 +989,7 @@ public class Utils {
         }
 
         public static boolean isLink(String string) {
-            return string.startsWith("http") && string.contains(".") && string.contains("://");
+            return string != null && string.startsWith("http") && string.contains(".") && string.contains("://");
         }
 
         public static boolean isPasteeLink(String link) {
@@ -970,12 +997,16 @@ public class Utils {
         }
 
         public static String makeRawPasteePaste(String arg) {
-            // https://api.paste.ee/v1/pastes/<id>
-            // https://paste.ee/p/XZKFL
-
+            if (arg == null || arg.trim().isEmpty()) {
+                return "";
+            }
+            String[] parts = arg.trim().split("/");
+            if (parts.length == 0 || parts[parts.length - 1].trim().isEmpty()) {
+                return "";
+            }
             StringBuilder rawLink = new StringBuilder();
             rawLink.append(base_url);
-            rawLink.append(arg.split("/")[arg.split("/").length - 1]);
+            rawLink.append(parts[parts.length - 1].trim());
             return rawLink.toString();
         }
 
@@ -1068,10 +1099,14 @@ public class Utils {
         }
 
         public static int[] getHypixelStats(String UUID, DuelsStatsMode dm) {
+            if (UUID == null || UUID.isEmpty())
+                return null;
             int[] s = { 0, 0, 0 };
             String u = UUID;
 
-            String c = URLS.getTextFromURL("https://api.hypixel.net/player?key=" + URLS.hypixelApiKey + "&uuid=" + u);
+            String c = u.trim().startsWith("{")
+                    ? u.trim()
+                    : URLS.getTextFromURL("https://api.hypixel.net/player?key=" + URLS.hypixelApiKey + "&uuid=" + u);
             if (c.isEmpty())
                 return null;
             if (c.equals("{\"success\":true,\"player\":null}"))
@@ -1079,9 +1114,21 @@ public class Utils {
             else {
                 JsonObject d;
                 try {
-                    JsonObject pr = parseJson(c).getAsJsonObject("player");
-                    d = pr.getAsJsonObject("stats").getAsJsonObject("Duels");
-                } catch (NullPointerException var8) {
+                    JsonObject root = parseJson(c);
+                    if (root == null || !root.has("player") || root.get("player").isJsonNull()) {
+                        s[0] = -1;
+                        return s;
+                    }
+                    JsonObject pr = root.getAsJsonObject("player");
+                    if (pr == null || !pr.has("stats") || pr.get("stats").isJsonNull()) {
+                        return s;
+                    }
+                    JsonObject stats = pr.getAsJsonObject("stats");
+                    if (stats == null || !stats.has("Duels") || stats.get("Duels").isJsonNull()) {
+                        return s;
+                    }
+                    d = stats.getAsJsonObject("Duels");
+                } catch (Exception var8) {
                     return s;
                 }
 
@@ -1131,8 +1178,11 @@ public class Utils {
 
         public static int getValueAsInt(JsonObject jsonObject, String key) {
             try {
+                if (jsonObject == null || key == null || !jsonObject.has(key) || jsonObject.get(key).isJsonNull()) {
+                    return 0;
+                }
                 return jsonObject.get(key).getAsInt();
-            } catch (NullPointerException var3) {
+            } catch (Exception var3) {
                 return 0;
             }
         }
@@ -1517,27 +1567,15 @@ public class Utils {
 
         }
 
-        public static PositionMode getPostitionMode(int marginX, int marginY, double height, double width) {
-            int halfHeight = (int) (height / 4);
-            int halfWidth = (int) width;
-            PositionMode positionMode = null;
-            // up left
+        public static PositionMode getPostitionMode(int marginX, int marginY, double width, double height) {
+            int halfHeight = (int) (height / 2.0D);
+            int halfWidth = (int) (width / 2.0D);
 
-            if (marginY < halfHeight) {
-                if (marginX < halfWidth)
-                    positionMode = PositionMode.UPLEFT;
-                if (marginX > halfWidth)
-                    positionMode = PositionMode.UPRIGHT;
+            if (marginY <= halfHeight) {
+                return (marginX <= halfWidth) ? PositionMode.UPLEFT : PositionMode.UPRIGHT;
+            } else {
+                return (marginX <= halfWidth) ? PositionMode.DOWNLEFT : PositionMode.DOWNRIGHT;
             }
-
-            if (marginY > halfHeight) {
-                if (marginX < halfWidth)
-                    positionMode = PositionMode.DOWNLEFT;
-                if (marginX > halfWidth)
-                    positionMode = PositionMode.DOWNRIGHT;
-            }
-
-            return positionMode;
         }
 
         public static void d2p(double x, double y, int radius, int sides, int color) {

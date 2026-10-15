@@ -47,10 +47,7 @@ public class TargetHUD extends Module {
 
     public TargetHUD() {
         super("Target HUD", ModuleCategory.render);
-        sr = new ScaledResolution(Minecraft.getMinecraft());
-        height = sr.getScaledHeight();
-        width = sr.getScaledWidth();
-        fr = mc.fontRendererObj;
+        fr = mc != null ? mc.fontRendererObj : null;
 
         this.registerSetting(mode = new ComboSetting("Mode", TargetHUDMode.Face));
         this.registerSetting(fadeTime = new SliderSetting("Fade Time (seconds)", 3.0, 1.0, 10.0, 0.5));
@@ -61,9 +58,9 @@ public class TargetHUD extends Module {
     public void onForgeEvent(ForgeEvent fe) {
         if (fe.getEvent() instanceof AttackEntityEvent) {
             AttackEntityEvent e = (AttackEntityEvent) fe.getEvent();
-            if (e.target instanceof EntityPlayer) {
-                EntityPlayer targetPlayer = (EntityPlayer) e.target;
-                target = (AbstractClientPlayer) targetPlayer;
+            if (e.target instanceof AbstractClientPlayer) {
+                AbstractClientPlayer targetPlayer = (AbstractClientPlayer) e.target;
+                target = targetPlayer;
                 lastTargetTime = System.currentTimeMillis();
                 recentTargets.put(targetPlayer, lastTargetTime);
             }
@@ -83,6 +80,7 @@ public class TargetHUD extends Module {
     @Subscribe
     public void onRender2d(Render2DEvent e) {
         if (editPosition.isToggled()) {
+            if (mc.thePlayer == null) return;
             target = mc.thePlayer;
             drawTargetHUD(target, 0, 10000000, 1.0f);
             return;
@@ -105,7 +103,7 @@ public class TargetHUD extends Module {
                     mostRecent = entry.getKey();
                 }
             }
-            if (mostRecent != null && currentTime - mostRecentTime < fadeTimeMs) {
+            if (mostRecent instanceof AbstractClientPlayer && currentTime - mostRecentTime < fadeTimeMs) {
                 animatedScale = interpolate(animatedScale, 1.0f, 0.1f);
                 drawTargetHUD((AbstractClientPlayer) mostRecent, currentTime - mostRecentTime, fadeTimeMs, animatedScale);
             }
@@ -122,7 +120,7 @@ public class TargetHUD extends Module {
     }
 
     private void drawTargetHUD(AbstractClientPlayer target, long timeSinceTarget, long fadeTime, float scale) {
-        if (scale <= 0.01f) return;
+        if (target == null || scale <= 0.01f) return;
 
         switch ((TargetHUDMode) mode.getMode()) {
             case ThreeD:
@@ -183,11 +181,11 @@ public class TargetHUD extends Module {
         FontUtil.normal.drawSmoothString(StringUtils.stripControlCodes(targetName), x + 40, y + 8, nameColor);
 
         float health = target.getHealth();
-        float maxHealth = target.getMaxHealth();
+        float maxHealth = Math.max(1f, target.getMaxHealth());
 
         if (animatedHealth == 0 || target == mc.thePlayer) animatedHealth = health;
         animatedHealth = interpolate(animatedHealth, health, 0.1f);
-        float healthPercent = animatedHealth / maxHealth;
+        float healthPercent = Math.max(0f, Math.min(1f, animatedHealth / maxHealth));
 
         int healthBarY = y + 25;
         int healthBarWidth = hudWidth - 45;
@@ -195,7 +193,7 @@ public class TargetHUD extends Module {
         RenderUtils.drawRoundedRect(x + 40, healthBarY, x + 40 + healthBarWidth, healthBarY + 8, 4,
                 (int) (alpha * 0x40) << 24 | 0x404040);
 
-        int healthColor = healthPercent > 0.5f ? 0xFF00FF00 : (healthPercent > 0.25f ? 0xFFFFFF00 : 0xFFFF0000);
+        int healthColor = healthPercent > 0.5f ? 0x00FF00 : (healthPercent > 0.25f ? 0xFFFF00 : 0xFF0000);
         int healthFillColor = (int) (alpha * 0xFF) << 24 | healthColor;
         RenderUtils.drawRoundedRect(x + 40, healthBarY, x + 40 + (int) (healthBarWidth * healthPercent), healthBarY + 8, 4,
                 healthFillColor);
@@ -203,7 +201,7 @@ public class TargetHUD extends Module {
         int armor = target.getTotalArmorValue();
         if (animatedArmor == 0 || target == mc.thePlayer) animatedArmor = armor;
         animatedArmor = interpolate(animatedArmor, armor, 0.1f);
-        float armorPercent = Math.min(1f, animatedArmor / 20f);
+        float armorPercent = Math.max(0f, Math.min(1f, animatedArmor / 20f));
 
         int armorBarY = healthBarY + 10;
         RenderUtils.drawRoundedRect(x + 40, armorBarY, x + 40 + healthBarWidth, armorBarY + 4, 2,
@@ -269,11 +267,11 @@ public class TargetHUD extends Module {
         FontUtil.normal.drawSmoothString(StringUtils.stripControlCodes(targetName), x + 40, y + 8, nameColor);
 
         float health = target.getHealth();
-        float maxHealth = target.getMaxHealth();
+        float maxHealth = Math.max(1f, target.getMaxHealth());
 
         if (animatedHealth == 0 || target == mc.thePlayer) animatedHealth = health;
         animatedHealth = interpolate(animatedHealth, health, 0.1f);
-        float healthPercent = animatedHealth / maxHealth;
+        float healthPercent = Math.max(0f, Math.min(1f, animatedHealth / maxHealth));
 
         int healthBarY = y + 25;
         int healthBarWidth = hudWidth - 45;
@@ -281,7 +279,7 @@ public class TargetHUD extends Module {
         RenderUtils.drawRoundedRect(x + 40, healthBarY, x + 40 + healthBarWidth, healthBarY + 8, 4,
                 (int) (alpha * 0x40) << 24 | 0x404040);
 
-        int healthColor = healthPercent > 0.5f ? 0xFF00FF00 : (healthPercent > 0.25f ? 0xFFFFFF00 : 0xFFFF0000);
+        int healthColor = healthPercent > 0.5f ? 0x00FF00 : (healthPercent > 0.25f ? 0xFFFF00 : 0xFF0000);
         int healthFillColor = (int) (alpha * 0xFF) << 24 | healthColor;
         RenderUtils.drawRoundedRect(x + 40, healthBarY, x + 40 + (int) (healthBarWidth * healthPercent), healthBarY + 8, 4,
                 healthFillColor);
@@ -289,7 +287,7 @@ public class TargetHUD extends Module {
         int armor = target.getTotalArmorValue();
         if (animatedArmor == 0 || target == mc.thePlayer) animatedArmor = armor;
         animatedArmor = interpolate(animatedArmor, armor, 0.1f);
-        float armorPercent = Math.min(1f, animatedArmor / 20f);
+        float armorPercent = Math.max(0f, Math.min(1f, animatedArmor / 20f));
 
         int armorBarY = healthBarY + 10;
         RenderUtils.drawRoundedRect(x + 40, armorBarY, x + 40 + healthBarWidth, armorBarY + 4, 2,
@@ -348,11 +346,11 @@ public class TargetHUD extends Module {
         FontUtil.normal.drawSmoothString(StringUtils.stripControlCodes(targetName), x + 5, y + 5, nameColor);
 
         float health = target.getHealth();
-        float maxHealth = target.getMaxHealth();
+        float maxHealth = Math.max(1f, target.getMaxHealth());
 
         if (animatedHealth == 0 || target == mc.thePlayer) animatedHealth = health;
         animatedHealth = interpolate(animatedHealth, health, 0.1f);
-        float healthPercent = animatedHealth / maxHealth;
+        float healthPercent = Math.max(0f, Math.min(1f, animatedHealth / maxHealth));
 
         int healthBarY = y + 19;
         int healthBarWidth = hudWidth - 10;
@@ -360,7 +358,7 @@ public class TargetHUD extends Module {
         RenderUtils.drawRoundedRect(x + 5, healthBarY, x + 5 + healthBarWidth, healthBarY + 8, 4,
                 (int) (alpha * 0x40) << 24 | 0x404040);
 
-        int healthColor = healthPercent > 0.5f ? 0xFF00FF00 : (healthPercent > 0.25f ? 0xFFFFFF00 : 0xFFFF0000);
+        int healthColor = healthPercent > 0.5f ? 0x00FF00 : (healthPercent > 0.25f ? 0xFFFF00 : 0xFF0000);
         int healthFillColor = (int) (alpha * 0xFF) << 24 | healthColor;
         RenderUtils.drawRoundedRect(x + 5, healthBarY, x + 5 + (int) (healthBarWidth * healthPercent), healthBarY + 8, 4,
                 healthFillColor);

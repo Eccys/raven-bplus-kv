@@ -92,6 +92,14 @@ public class RightClicker extends Module {
 
     public void onDisable() {
         this.rightClickWaiting = false;
+        this.allowedClick = false;
+        this.righti = 0L;
+        this.rightj = 0L;
+        this.rightDown = false;
+        Utils.Client.setMouseButtonState(1, false);
+        if (mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+        }
     }
 
     @Subscribe
@@ -177,6 +185,7 @@ public class RightClicker extends Module {
                     entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
                             - (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
                 }
+                entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
             }
 
             if (System.currentTimeMillis() - lastClick > speedRight * 1000) {
@@ -305,6 +314,7 @@ public class RightClicker extends Module {
                 entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
                         - (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
             }
+            entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
         }
 
         if (this.rightj > 0L && this.righti > 0L) {

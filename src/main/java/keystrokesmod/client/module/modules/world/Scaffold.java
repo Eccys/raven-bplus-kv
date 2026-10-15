@@ -63,6 +63,25 @@ public class Scaffold extends Module {
         this.registerSetting(renderAlpha = new SliderSetting("RenderAlpha", 100, 0, 255, 1));
     }
 
+    @Override
+    public void onEnable() {
+        if (Utils.Player.isPlayerInGame()) {
+            yaw = mc.thePlayer.rotationYaw;
+            pitch = mc.thePlayer.rotationPitch;
+        }
+        targetBlock = null;
+        super.onEnable();
+    }
+
+    @Override
+    public void onDisable() {
+        targetBlock = null;
+        if (mc.gameSettings != null && mc.gameSettings.keyBindSneak != null) {
+            net.minecraft.client.settings.KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
+        }
+        super.onDisable();
+    }
+
     @Subscribe
     public void gameLoopEvent(GameLoopEvent e) {
         if (!Utils.Player.isPlayerInGame()) return;
@@ -95,8 +114,16 @@ public class Scaffold extends Module {
             if (neighbor != null) {
                 targetBlock = under; // Store target block for rendering
                 float[] rots = getRotations(neighbor, side);
-                yaw = rots[0];
-                pitch = rots[1];
+                float maxStep = (float) rps.getInput();
+                if (maxStep > 0f && maxStep < 180f) {
+                    float yawDiff = MathHelper.wrapAngleTo180_float(rots[0] - yaw);
+                    float pitchDiff = MathHelper.wrapAngleTo180_float(rots[1] - pitch);
+                    yaw += MathHelper.clamp_float(yawDiff, -maxStep, maxStep);
+                    pitch = MathHelper.clamp_float(pitch + MathHelper.clamp_float(pitchDiff, -maxStep, maxStep), -90f, 90f);
+                } else {
+                    yaw = rots[0];
+                    pitch = MathHelper.clamp_float(rots[1], -90f, 90f);
+                }
 
                 int blockSlot = Utils.Player.getBlockSlot();
                 if (blockSlot != -1) {
@@ -146,6 +173,7 @@ public class Scaffold extends Module {
 
     @Subscribe
     public void onRender2D(Render2DEvent e) {
+        if (!Utils.Player.isPlayerInGame()) return;
         ScaledResolution sr = new ScaledResolution(mc);
         FontUtil.normal.drawCenteredSmoothString(blockCount + " blocks", (int) (sr.getScaledWidth() / 2f + 8), (int) (sr.getScaledHeight() / 2f - 4), blockCount <= 16 ? 0xff0000 : -1);
     }

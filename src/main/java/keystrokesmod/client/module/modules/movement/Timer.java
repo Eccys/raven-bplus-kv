@@ -1,7 +1,9 @@
 package keystrokesmod.client.module.modules.movement;
 
 import com.google.common.eventbus.Subscribe;
+import keystrokesmod.client.clickgui.kv.KvCompactGui;
 import keystrokesmod.client.clickgui.raven.ClickGui;
+import keystrokesmod.client.clickgui.raven.ModernClickGui;
 import keystrokesmod.client.event.impl.TickEvent;
 import keystrokesmod.client.module.Module;
 import keystrokesmod.client.module.setting.impl.SliderSetting;
@@ -22,7 +24,13 @@ public class Timer extends Module {
 
     @Subscribe
     public void onTick(TickEvent e) {
-        if (!(mc.currentScreen instanceof ClickGui)) {
+        if (!Utils.Player.isPlayerInGame()) {
+            Utils.Client.resetTimer();
+            return;
+        }
+        if (!(mc.currentScreen instanceof ClickGui)
+                && !(mc.currentScreen instanceof ModernClickGui)
+                && !(mc.currentScreen instanceof KvCompactGui)) {
             if (b.isToggled() && mc.thePlayer.moveStrafing == 0.0F) {
                 Utils.Client.resetTimer();
                 return;

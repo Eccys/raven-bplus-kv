@@ -25,10 +25,16 @@ public class BedAura extends Module {
         this.registerSetting(r = new SliderSetting("Range", 5.0D, 2.0D, 10.0D, 1.0D));
     }
 
+    @Override
     public void onEnable() {
+        if (this.t != null) {
+            this.t.cancel();
+            this.t.purge();
+        }
         (this.t = new java.util.Timer()).scheduleAtFixedRate(this.t(), 0L, 600L);
     }
 
+    @Override
     public void onDisable() {
         if (this.t != null) {
             this.t.cancel();
@@ -42,34 +48,44 @@ public class BedAura extends Module {
     public TimerTask t() {
         return new TimerTask() {
             public void run() {
-                int ra = (int) r.getInput();
+                try {
+                    if (!Utils.Player.isPlayerInGame()) {
+                        return;
+                    }
+                    int ra = (int) r.getInput();
 
-                for (int y = ra; y >= -ra; --y) {
-                    for (int x = -ra; x <= ra; ++x) {
-                        for (int z = -ra; z <= ra; ++z) {
-                            if (Utils.Player.isPlayerInGame()) {
+                    searchLoop:
+                    for (int y = ra; y >= -ra; --y) {
+                        for (int x = -ra; x <= ra; ++x) {
+                            for (int z = -ra; z <= ra; ++z) {
+                                if (!Utils.Player.isPlayerInGame()) {
+                                    break searchLoop;
+                                }
                                 BlockPos p = new BlockPos(Module.mc.thePlayer.posX + (double) x,
                                         Module.mc.thePlayer.posY + (double) y, Module.mc.thePlayer.posZ + (double) z);
                                 boolean bed = Module.mc.theWorld.getBlockState(p).getBlock() == Blocks.bed;
-                                if (BedAura.this.m == p) {
+                                if (p.equals(BedAura.this.m)) {
                                     if (!bed) {
                                         BedAura.this.m = null;
                                     }
                                 } else if (bed) {
                                     BedAura.this.mi(p);
                                     BedAura.this.m = p;
-                                    break;
+                                    break searchLoop;
                                 }
                             }
                         }
                     }
+                } catch (Exception ignored) {
                 }
-
             }
         };
     }
 
     private void mi(BlockPos p) {
+        if (mc.thePlayer == null || mc.thePlayer.sendQueue == null) {
+            return;
+        }
         mc.thePlayer.sendQueue
                 .addToSendQueue(new C07PacketPlayerDigging(Action.START_DESTROY_BLOCK, p, EnumFacing.NORTH));
         mc.thePlayer.sendQueue
