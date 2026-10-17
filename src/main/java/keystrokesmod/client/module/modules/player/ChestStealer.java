@@ -52,21 +52,24 @@ public class ChestStealer extends Module {
                 delayTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(firstDelay.getInputMin(),
                         firstDelay.getInputMax() + 0.01));
                 delayTimer.start();
-                generatePath(chest);
+                sortedSlots = null;
                 closingChest = false;
                 inChest = true;
             }
-            if (inChest && sortedSlots != null && !sortedSlots.isEmpty()) {
-                if (delayTimer.hasFinished()) {
-                    mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, sortedSlots.get(0).s, 0, 1,
-                            mc.thePlayer);
-                    delayTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(delay.getInputMin(),
-                            delay.getInputMax() + 0.01));
-                    delayTimer.start();
-                    sortedSlots.remove(0);
-                }
+            if (!delayTimer.hasFinished()) {
+                return;
             }
-            if (sortedSlots != null && sortedSlots.isEmpty() && autoClose.isToggled()) {
+            if (sortedSlots == null) {
+                generatePath(chest);
+            }
+            if (sortedSlots != null && !sortedSlots.isEmpty()) {
+                mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, sortedSlots.get(0).s, 0, 1,
+                        mc.thePlayer);
+                delayTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(delay.getInputMin(),
+                        delay.getInputMax() + 0.01));
+                delayTimer.start();
+                sortedSlots.remove(0);
+            } else if (sortedSlots != null && autoClose.isToggled()) {
                 if (!closingChest) {
                     closeTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(closeDelay.getInputMin(),
                             closeDelay.getInputMax() + 0.01));
@@ -76,11 +79,13 @@ public class ChestStealer extends Module {
                     mc.thePlayer.closeScreen();
                     inChest = false;
                     closingChest = false;
+                    sortedSlots = null;
                 }
             }
         } else {
             inChest = false;
             closingChest = false;
+            sortedSlots = null;
         }
     }
 
@@ -92,7 +97,9 @@ public class ChestStealer extends Module {
         }
         Slot[] ss = sort(slots.toArray(new Slot[slots.size()]));
         ArrayList<Slot> newSlots = new ArrayList<Slot>();
-        Collections.addAll(newSlots, ss);
+        if (ss != null) {
+            Collections.addAll(newSlots, ss);
+        }
         this.sortedSlots = newSlots;
     }
 
@@ -100,19 +107,26 @@ public class ChestStealer extends Module {
         if (in == null || in.length == 0) {
             return in;
         }
+        for (Slot slot : in) {
+            if (slot != null) {
+                slot.visited = false;
+            }
+        }
         Slot[] out = new Slot[in.length];
         Slot current = in[ThreadLocalRandom.current().nextInt(0, in.length)];
         for (int i = 0; i < in.length; i++) {
             if (i == in.length - 1) {
-                out[in.length - 1] = Arrays.stream(in).filter(p -> !p.visited).findAny().orElse(null);
+                out[in.length - 1] = Arrays.stream(in).filter(p -> p != null && !p.visited).findAny().orElse(null);
+                break;
+            }
+            if (current == null) {
                 break;
             }
             Slot finalCurrent = current;
             out[i] = finalCurrent;
             finalCurrent.visit();
-            Slot next = Arrays.stream(in).filter(p -> !p.visited)
-                    .min(Comparator.comparingDouble(p -> p.getDistance(finalCurrent))).get();
-            current = next;
+            current = Arrays.stream(in).filter(p -> p != null && !p.visited)
+                    .min(Comparator.comparingDouble(p -> p.getDistance(finalCurrent))).orElse(null);
         }
         return out;
     }
@@ -127,6 +141,10 @@ public class ChestStealer extends Module {
             this.x = s % 9;
             this.y = s / 9;
             this.s = s;
+        }
+
+        public int getSlotIndex() {
+            return s;
         }
 
         public double getDistance(Slot s) {

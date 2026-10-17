@@ -60,6 +60,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.ContainerChest;
 import net.minecraft.inventory.ContainerPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemAxe;
@@ -117,11 +118,11 @@ public class Utils {
     public static class Player {
 
         public static boolean isPlayerInChest() {
-            return (mc.currentScreen != null) && (mc.thePlayer.inventoryContainer != null) && (mc.thePlayer.inventoryContainer instanceof ContainerPlayer) && (mc.currentScreen instanceof GuiChest);
+            return isPlayerInGame() && (mc.thePlayer.openContainer instanceof ContainerChest) && (mc.currentScreen instanceof GuiChest);
         }
 
         public static boolean isPlayerInInventory() {
-            return (mc.currentScreen != null) && (mc.thePlayer.inventoryContainer != null) && (mc.thePlayer.inventoryContainer instanceof ContainerPlayer) && (mc.currentScreen instanceof GuiInventory);
+            return isPlayerInGame() && (mc.thePlayer.inventoryContainer instanceof ContainerPlayer) && (mc.currentScreen instanceof GuiInventory);
         }
 
         public static MovingObjectPosition rayTrace(double reach, float partialTicks) {
@@ -540,6 +541,9 @@ public class Utils {
         }
 
         public static boolean isThrowableItem(ItemStack is) {
+            if (is == null || is.getItem() == null) {
+                return false;
+            }
             Item i = is.getItem();
             return (i instanceof ItemEgg) || (i instanceof ItemEnderEye) || (i instanceof ItemEnderPearl)
                     || (i instanceof ItemSnowball) || (i instanceof ItemExpBottle)
@@ -570,16 +574,20 @@ public class Utils {
         }
 
         public static void setMouseButtonState(int mouseButton, boolean held) {
-            MouseEvent m = new MouseEvent();
+            try {
+                MouseEvent m = new MouseEvent();
 
-            ObfuscationReflectionHelper.setPrivateValue(MouseEvent.class, m, mouseButton, "button");
-            ObfuscationReflectionHelper.setPrivateValue(MouseEvent.class, m, held, "buttonstate");
-            MinecraftForge.EVENT_BUS.post(m);
+                ObfuscationReflectionHelper.setPrivateValue(MouseEvent.class, m, mouseButton, "button");
+                ObfuscationReflectionHelper.setPrivateValue(MouseEvent.class, m, held, "buttonstate");
+                MinecraftForge.EVENT_BUS.post(m);
 
-            ByteBuffer buttons = ObfuscationReflectionHelper.getPrivateValue(Mouse.class, null, "buttons");
-            buttons.put(mouseButton, (byte) (held ? 1 : 0));
-            ObfuscationReflectionHelper.setPrivateValue(Mouse.class, null, buttons, "buttons");
-
+                ByteBuffer buttons = ObfuscationReflectionHelper.getPrivateValue(Mouse.class, null, "buttons");
+                if (buttons != null && mouseButton >= 0 && mouseButton < buttons.limit()) {
+                    buttons.put(mouseButton, (byte) (held ? 1 : 0));
+                    ObfuscationReflectionHelper.setPrivateValue(Mouse.class, null, buttons, "buttons");
+                }
+            } catch ( Throwable ignored) {
+            }
         }
 
         public static void correctSliders(SliderSetting c, SliderSetting d) {
@@ -605,10 +613,12 @@ public class Utils {
             if (!Player.isPlayerInGame())
                 return false;
             try {
-                return !mc.isSingleplayer() && (mc.getCurrentServerData().serverIP.toLowerCase().contains("hypixel.net")
-                        || mc.getCurrentServerData().serverIP.toLowerCase().contains("localhost"));
+                return !mc.isSingleplayer()
+                        && mc.getCurrentServerData() != null
+                        && mc.getCurrentServerData().serverIP != null
+                        && (mc.getCurrentServerData().serverIP.toLowerCase().contains("hypixel.net")
+                                || mc.getCurrentServerData().serverIP.toLowerCase().contains("localhost"));
             } catch (Exception welpBruh) {
-                welpBruh.printStackTrace();
                 return false;
             }
         }

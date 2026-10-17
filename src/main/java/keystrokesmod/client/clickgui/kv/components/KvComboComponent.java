@@ -12,6 +12,7 @@ public class KvComboComponent extends KvComponent {
 	private ComboSetting setting;
 
 	public KvComboComponent(Setting setting) {
+		super.setting = setting;
 		this.setting = (ComboSetting) setting;
 	}
 

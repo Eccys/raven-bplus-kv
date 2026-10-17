@@ -559,15 +559,20 @@ public class RavenCoreTest {
         java.util.Set<Integer> seen = new java.util.HashSet<>();
         for (keystrokesmod.client.module.modules.player.ChestStealer.Slot slot : sorted) {
             assertNotNull(slot);
-            seen.add(updateSlotIndex(slot));
+            seen.add(slot.getSlotIndex());
         }
         assertEquals(4, seen.size());
-    }
 
-    private static int updateSlotIndex(keystrokesmod.client.module.modules.player.ChestStealer.Slot slot) {
-        keystrokesmod.client.module.modules.player.ChestStealer.Slot origin =
-                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(0);
-        return (int) Math.round(slot.getDistance(origin));
+        // Calling sort a second time on the same Slot instances must reset visited and not throw NoSuchElementException
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot[] sortedAgain =
+                keystrokesmod.client.module.modules.player.ChestStealer.sort(input);
+        assertEquals(4, sortedAgain.length);
+        java.util.Set<Integer> seenAgain = new java.util.HashSet<>();
+        for (keystrokesmod.client.module.modules.player.ChestStealer.Slot slot : sortedAgain) {
+            assertNotNull(slot);
+            seenAgain.add(slot.getSlotIndex());
+        }
+        assertEquals(4, seenAgain.size());
     }
 
     @Test
@@ -607,6 +612,15 @@ public class RavenCoreTest {
     @Test
     public void testAutoArmourGetArmorValueNullSafety() {
         assertEquals(-1.0f, keystrokesmod.client.module.modules.player.AutoArmour.getArmorValue(null, null), 1e-6f);
+        assertFalse(keystrokesmod.client.module.modules.player.AutoArmour.hasEmptyInventorySlot(null));
+        assertFalse(keystrokesmod.client.module.modules.player.AutoArmour.hasEmptyInventorySlot(new net.minecraft.item.ItemStack[0]));
+        assertTrue(keystrokesmod.client.module.modules.player.AutoArmour.hasEmptyInventorySlot(new net.minecraft.item.ItemStack[1]));
+
+        assertEquals(-1, keystrokesmod.client.module.modules.player.AutoArmour.getHotbarSwapButton(9));
+        assertEquals(-1, keystrokesmod.client.module.modules.player.AutoArmour.getHotbarSwapButton(35));
+        assertEquals(0, keystrokesmod.client.module.modules.player.AutoArmour.getHotbarSwapButton(36));
+        assertEquals(8, keystrokesmod.client.module.modules.player.AutoArmour.getHotbarSwapButton(44));
+        assertEquals(-1, keystrokesmod.client.module.modules.player.AutoArmour.getHotbarSwapButton(45));
     }
 
     @Test
@@ -667,5 +681,57 @@ public class RavenCoreTest {
         keystrokesmod.client.module.modules.player.Parkour parkour =
                 new keystrokesmod.client.module.modules.player.Parkour();
         parkour.onDisable();
+
+        keystrokesmod.client.module.modules.combat.LeftClicker leftClicker =
+                new keystrokesmod.client.module.modules.combat.LeftClicker();
+        leftClicker.onDisable();
+
+        keystrokesmod.client.module.modules.player.RightClicker rightClicker =
+                new keystrokesmod.client.module.modules.player.RightClicker();
+        rightClicker.onDisable();
+
+        keystrokesmod.client.module.modules.combat.BlockHit blockHit =
+                new keystrokesmod.client.module.modules.combat.BlockHit();
+        keystrokesmod.client.module.modules.combat.BlockHit.executingAction = true;
+        blockHit.onDisable();
+        assertFalse(keystrokesmod.client.module.modules.combat.BlockHit.executingAction);
+
+        keystrokesmod.client.module.modules.combat.WTap wTap =
+                new keystrokesmod.client.module.modules.combat.WTap();
+        wTap.onDisable();
+
+        keystrokesmod.client.module.modules.combat.STap sTap =
+                new keystrokesmod.client.module.modules.combat.STap();
+        sTap.onDisable();
+
+        keystrokesmod.client.module.modules.combat.ShiftTap shiftTap =
+                new keystrokesmod.client.module.modules.combat.ShiftTap();
+        shiftTap.onDisable();
+
+        keystrokesmod.client.module.modules.combat.ClickAssist clickAssist =
+                new keystrokesmod.client.module.modules.combat.ClickAssist();
+        clickAssist.onDisable();
+
+        keystrokesmod.client.module.modules.render.Chams chams =
+                new keystrokesmod.client.module.modules.render.Chams();
+        chams.onForgeEvent(null);
+        chams.onDisable();
+
+        keystrokesmod.client.module.modules.movement.Timer timer =
+                new keystrokesmod.client.module.modules.movement.Timer();
+        timer.onDisable();
+    }
+
+    @Test
+    public void testConfigSettingsGuiButtonToggledDispatchAndThrowableNullSafety() {
+        keystrokesmod.client.module.modules.config.ConfigSettings cfg =
+                new keystrokesmod.client.module.modules.config.ConfigSettings();
+        cfg.updateConfig.setEnabled(true);
+        keystrokesmod.client.module.Module asModule = cfg;
+        // Dispatch through base Module.guiButtonToggled(Setting) to verify override signature
+        asModule.guiButtonToggled(cfg.updateConfig);
+        assertFalse(cfg.updateConfig.isToggled());
+
+        assertFalse(keystrokesmod.client.utils.Utils.Client.isThrowableItem(null));
     }
 }

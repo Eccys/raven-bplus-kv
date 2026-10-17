@@ -43,6 +43,21 @@ public class BlockHit extends Module {
 
     }
 
+    @Override
+    public void onDisable() {
+        if (executingAction) {
+            executingAction = false;
+            if (mc != null && mc.gameSettings != null) {
+                KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+            }
+            Utils.Client.setMouseButtonState(1, false);
+        }
+        tryStartCombo = false;
+        hits = 0;
+        rHit = 0;
+        call = false;
+    }
+
     @Subscribe
     public void onRender(Render2DEvent e) {
         if (!Utils.Player.isPlayerInGame())

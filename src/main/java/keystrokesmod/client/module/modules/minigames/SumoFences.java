@@ -54,7 +54,10 @@ public class SumoFences extends Module {
 
     public SumoFences() {
         super("Sumo Fences", ModuleCategory.minigames);
-        this.f = Blocks.oak_fence.getDefaultState();
+        try {
+            this.f = Blocks.oak_fence.getDefaultState();
+        } catch (Throwable ignored) {
+        }
         this.c1 = "Mode: Sumo Duel";
         this.c2 = "Oak fence";
         this.c3 = "Leaves";
@@ -77,10 +80,14 @@ public class SumoFences extends Module {
             this.t = null;
         }
 
+        if (mc == null || mc.theWorld == null || this.f == null) {
+            return;
+        }
+
         for (BlockPos p : f_p) {
             for (int i = 0; (double) i < b.getInput(); ++i) {
-                BlockPos p2 = new BlockPos(p.getX(), p.getY() + i, p.getZ());
-                if (mc.theWorld.getBlockState(p2).getBlock() == this.f) {
+                BlockPos p2 = new BlockPos(p.getX(), p.getY() + i + ymod, p.getZ());
+                if (mc.theWorld.getBlockState(p2) == this.f) {
                     mc.theWorld.setBlockState(p2, Blocks.air.getDefaultState());
                 }
             }

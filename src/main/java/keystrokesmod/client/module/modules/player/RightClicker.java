@@ -161,59 +161,66 @@ public class RightClicker extends Module {
         double rightHoldLength = speedRight / io.netty.util.internal.ThreadLocalRandom.current()
                 .nextDouble(rightCPS.getInputMin() - 0.02D, rightCPS.getInputMax());
 
-        if (!Mouse.isButtonDown(1) && !rightDown) {
-            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
-            Utils.Client.setMouseButtonState(1, false);
-        }
-
-        if (Mouse.isButtonDown(1) || rightDown) {
-            if (!this.rightClickAllowed())
-                return;
-
-            if (jitterRight.getInput() > 0.0D) {
-                double jitterMultiplier = jitterRight.getInput() * 0.45D;
-                EntityPlayerSP entityPlayer;
-                if (this.rand.nextBoolean()) {
-                    entityPlayer = mc.thePlayer;
-                    entityPlayer.rotationYaw = (float) ((double) entityPlayer.rotationYaw
-                            + (double) this.rand.nextFloat() * jitterMultiplier);
-                } else {
-                    entityPlayer = mc.thePlayer;
-                    entityPlayer.rotationYaw = (float) ((double) entityPlayer.rotationYaw
-                            - (double) this.rand.nextFloat() * jitterMultiplier);
-                }
-
-                if (this.rand.nextBoolean()) {
-                    entityPlayer = mc.thePlayer;
-                    entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
-                            + (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
-                } else {
-                    entityPlayer = mc.thePlayer;
-                    entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
-                            - (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
-                }
-                entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
-            }
-
-            if (System.currentTimeMillis() - lastClick > speedRight * 1000) {
-                lastClick = System.currentTimeMillis();
-                if (rightHold < lastClick) {
-                    rightHold = lastClick;
-                }
-                int key = mc.gameSettings.keyBindUseItem.getKeyCode();
-                KeyBinding.setKeyBindState(key, true);
-                Utils.Client.setMouseButtonState(1, true);
-                KeyBinding.onTick(key);
-                rightDown = false;
-            } else if (System.currentTimeMillis() - rightHold > rightHoldLength * 1000) {
-                rightDown = true;
+        Mouse.poll();
+        if (!Mouse.isButtonDown(1)) {
+            if (rightDown) {
                 KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
                 Utils.Client.setMouseButtonState(1, false);
-
+                rightDown = false;
             }
-        } else if (!Mouse.isButtonDown(1)) {
             this.rightClickWaiting = false;
             this.allowedClick = false;
+            return;
+        }
+
+        if (!this.rightClickAllowed()) {
+            if (rightDown) {
+                KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+                Utils.Client.setMouseButtonState(1, false);
+                rightDown = false;
+            }
+            return;
+        }
+
+        if (jitterRight.getInput() > 0.0D) {
+            double jitterMultiplier = jitterRight.getInput() * 0.45D;
+            EntityPlayerSP entityPlayer;
+            if (this.rand.nextBoolean()) {
+                entityPlayer = mc.thePlayer;
+                entityPlayer.rotationYaw = (float) ((double) entityPlayer.rotationYaw
+                        + (double) this.rand.nextFloat() * jitterMultiplier);
+            } else {
+                entityPlayer = mc.thePlayer;
+                entityPlayer.rotationYaw = (float) ((double) entityPlayer.rotationYaw
+                        - (double) this.rand.nextFloat() * jitterMultiplier);
+            }
+
+            if (this.rand.nextBoolean()) {
+                entityPlayer = mc.thePlayer;
+                entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
+                        + (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
+            } else {
+                entityPlayer = mc.thePlayer;
+                entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
+                        - (double) this.rand.nextFloat() * jitterMultiplier * 0.45D);
+            }
+            entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
+        }
+
+        if (System.currentTimeMillis() - lastClick > speedRight * 1000) {
+            lastClick = System.currentTimeMillis();
+            if (rightHold < lastClick) {
+                rightHold = lastClick;
+            }
+            int key = mc.gameSettings.keyBindUseItem.getKeyCode();
+            KeyBinding.setKeyBindState(key, true);
+            Utils.Client.setMouseButtonState(1, true);
+            KeyBinding.onTick(key);
+            rightDown = true;
+        } else if (rightDown && System.currentTimeMillis() - rightHold > rightHoldLength * 1000) {
+            rightDown = false;
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+            Utils.Client.setMouseButtonState(1, false);
         }
     }
 
@@ -237,6 +244,9 @@ public class RightClicker extends Module {
 
     public boolean rightClickAllowed() {
         ItemStack item = mc.thePlayer.getHeldItem();
+        if (onlyBlocks.isToggled() && (item == null || !(item.getItem() instanceof ItemBlock))) {
+            return false;
+        }
         if (item != null) {
             if (allowEat.isToggled()) {
                 if ((item.getItem() instanceof ItemFood) || item.getItem() instanceof ItemPotion

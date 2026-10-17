@@ -19,6 +19,7 @@ public class KvTickComponent extends KvComponent {
 	private CoolDown timer = new CoolDown(1);
 
 	public KvTickComponent(Setting setting) {
+		super.setting = setting;
 		this.setting = (TickSetting) setting;
 	}
 

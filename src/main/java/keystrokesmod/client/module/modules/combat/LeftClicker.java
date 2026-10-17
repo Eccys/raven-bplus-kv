@@ -206,8 +206,13 @@ public class LeftClicker extends Module {
 
         // Uhh left click only, mate
         if (Mouse.isButtonDown(0)) {
-            if (breakBlock() || (weaponOnly.isToggled() && !Utils.Player.isPlayerHoldingWeapon()))
-				return;
+            if (breakBlock())
+                return;
+            if (weaponOnly.isToggled() && !Utils.Player.isPlayerHoldingWeapon()) {
+                KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+                Utils.Client.setMouseButtonState(0, false);
+                return;
+            }
             if (jitterLeft.getInput() > 0.0D) {
                 double a = jitterLeft.getInput() * 0.45D;
                 EntityPlayerSP entityPlayer;
@@ -247,6 +252,9 @@ public class LeftClicker extends Module {
                 KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
                 Utils.Client.setMouseButtonState(0, false);
             }
+        } else {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+            Utils.Client.setMouseButtonState(0, false);
         }
     }
 
@@ -315,9 +323,10 @@ public class LeftClicker extends Module {
                 leftDown = false;
             } else if (currentTime > this.leftDownTime && !leftDown) {
                 // Prepare for next click only if mouse is still held
+                KeyBinding.setKeyBindState(key, false);
+                Utils.Client.setMouseButtonState(0, false); // Ensure released state
                 if (Mouse.isButtonDown(0)) {
                     leftDown = true;
-                    Utils.Client.setMouseButtonState(0, false); // Ensure released state
                 } else {
                     // Mouse released, reset timing
                     this.leftDownTime = 0L;
@@ -392,6 +401,9 @@ public class LeftClicker extends Module {
         }
         if (breakHeld) {
             breakHeld = false;
+            if (mc != null && mc.gameSettings != null) {
+                KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+            }
         }
         return false;
     }

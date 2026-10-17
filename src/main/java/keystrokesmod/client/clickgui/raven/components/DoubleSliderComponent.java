@@ -32,6 +32,7 @@ public class DoubleSliderComponent extends SettingComponent {
                 setting.setValueMax(value);
             else if(helping == Helping.Min)
                 setting.setValueMin(value);
+            moduleComponent.mod.guiUpdate();
         }
 
         //name + input
@@ -65,8 +66,9 @@ public class DoubleSliderComponent extends SettingComponent {
 
     @Override
     public void clicked(int mouseX, int mouseY, int button) {
+        if (button != 0) return;
         mouseDown = true;
-        float percentageAcross = (mouseX - x) / (float) width;
+        float percentageAcross = (mouseX - (this.x + 5)) / (float) width;
         //percentageAcross = (float) ((percentageAcross * (setting.getMax())) + (setting.getMin() * (1 - percentageAcross)));
         float percentangeMax = (float) ((setting.getInputMax() - setting.getMin())/(setting.getMax() - setting.getMin())) + 0.01f;
         float percentangeMin = (float) ((setting.getInputMin() - setting.getMin())/(setting.getMax() - setting.getMin()));

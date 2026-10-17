@@ -51,8 +51,14 @@ public class ClickAssist extends Module {
     }
 
     public void onDisable() {
-        this.fix(0);
-        this.fix(1);
+        if (this.bot != null) {
+            if (this.engagedLeft) {
+                this.bot.mouseRelease(16);
+            }
+            if (this.engagedRight) {
+                this.bot.mouseRelease(4);
+            }
+        }
         this.engagedLeft = false;
         this.engagedRight = false;
         this.bot = null;
@@ -131,14 +137,15 @@ public class ClickAssist extends Module {
     }
 
     private void fix(int t) {
-        if (this.bot == null) return;
+        if (this.bot == null || !Mouse.isCreated()) return;
         if (t == 0) {
             if (this.engagedLeft && !Mouse.isButtonDown(0)) {
                 this.bot.mouseRelease(16);
+                this.engagedLeft = false;
             }
         } else if (t == 1 && this.engagedRight && !Mouse.isButtonDown(1)) {
             this.bot.mouseRelease(4);
+            this.engagedRight = false;
         }
-
     }
 }

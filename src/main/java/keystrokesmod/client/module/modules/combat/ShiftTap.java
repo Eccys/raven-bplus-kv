@@ -52,6 +52,18 @@ public class ShiftTap extends Module {
         this.registerSetting(tapMultiplier = new SliderSetting("wait time sensitivity", 1F, 0F, 5F, 0.1F));
     }
 
+    @Override
+    public void onDisable() {
+        if (state == WtapState.TAPPING && mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), false);
+        }
+        state = WtapState.NONE;
+        hits = 0;
+        rhit = 0;
+        call = false;
+        target = null;
+    }
+
     @Subscribe
     public void onRender2D(Render2DEvent e) {
         if (state == WtapState.NONE)

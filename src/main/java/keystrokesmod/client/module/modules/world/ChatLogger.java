@@ -19,9 +19,13 @@ public class ChatLogger extends Module {
         super("Chat Logger", ModuleCategory.world);
 
         extension = "txt";
-        dir = new File(mc.mcDataDir, "keystrokes" + File.separator + "logs");
-        if (!dir.exists()) {
-            dir.mkdir();
+        if (mc != null && mc.mcDataDir != null) {
+            dir = new File(mc.mcDataDir, "keystrokes" + File.separator + "logs");
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+        } else {
+            dir = null;
         }
     }
 
@@ -30,7 +34,11 @@ public class ChatLogger extends Module {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH.mm.ss");
         LocalDateTime now = LocalDateTime.now();
         fileName = dtf.format(now) + "." + extension;
-        this.chatLog = new File(dir, fileName);
+        File logDir = dir != null ? dir : new File("keystrokes" + File.separator + "logs");
+        if (!logDir.exists()) {
+            logDir.mkdirs();
+        }
+        this.chatLog = new File(logDir, fileName);
         if (!chatLog.exists()) {
             try {
                 chatLog.createNewFile();
@@ -44,11 +52,15 @@ public class ChatLogger extends Module {
 
     @Subscribe
     public void onMessageRecieved(ForgeEvent fe) {
-        if (fe.getEvent() instanceof ClientChatReceivedEvent) {
+        if (fe != null && fe.getEvent() instanceof ClientChatReceivedEvent && this.chatLog != null) {
+            ClientChatReceivedEvent chatEvent = (ClientChatReceivedEvent) fe.getEvent();
+            if (chatEvent.message == null) {
+                return;
+            }
             try (FileWriter fw = new FileWriter(this.chatLog.getPath(), true);
                     BufferedWriter bw = new BufferedWriter(fw);
                     PrintWriter out = new PrintWriter(bw)) {
-                out.println(((ClientChatReceivedEvent) fe.getEvent()).message.getUnformattedText());
+                out.println(chatEvent.message.getUnformattedText());
             } catch (IOException e) {
                 // shit
             }

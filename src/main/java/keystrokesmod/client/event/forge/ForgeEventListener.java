@@ -1,6 +1,8 @@
 package keystrokesmod.client.event.forge;
 
+import keystrokesmod.client.clickgui.kv.KvCompactGui;
 import keystrokesmod.client.clickgui.raven.ClickGui;
+import keystrokesmod.client.clickgui.raven.ModernClickGui;
 import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.Render2DEvent;
 import keystrokesmod.client.main.Raven;
