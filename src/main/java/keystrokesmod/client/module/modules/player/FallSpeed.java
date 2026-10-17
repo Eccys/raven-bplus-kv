@@ -23,6 +23,9 @@ public class FallSpeed extends Module {
 
     @Subscribe
     public void onTick(TickEvent e) {
+        if (!keystrokesmod.client.utils.Utils.Player.isPlayerInGame()) {
+            return;
+        }
         if ((double) mc.thePlayer.fallDistance >= 2.5D) {
             Module fly = Raven.moduleManager.getModuleByClazz(Fly.class);
             Module noFall = Raven.moduleManager.getModuleByClazz(NoFall.class);

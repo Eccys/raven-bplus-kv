@@ -16,6 +16,13 @@ public class Parkour extends Module {
         super("Parkour", ModuleCategory.player);
     }
 
+    @Override
+    public void onDisable() {
+        if (mc != null && mc.gameSettings != null && !Keyboard.isKeyDown(mc.gameSettings.keyBindJump.getKeyCode())) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindJump.getKeyCode(), false);
+        }
+    }
+
     @Subscribe
     public void onTick(TickEvent e) {
         if (!Utils.Player.isPlayerInGame())

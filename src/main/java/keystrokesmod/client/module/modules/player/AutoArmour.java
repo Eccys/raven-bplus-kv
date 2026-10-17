@@ -24,6 +24,7 @@ public class AutoArmour extends Module {
     private final TickSetting dropWorse;
     private final TickSetting invOpen;
     private final CoolDown delayTimer = new CoolDown(0);
+    private boolean inInventory = false;
 
     public AutoArmour() {
         super("AutoArmour", ModuleCategory.player);
@@ -36,14 +37,30 @@ public class AutoArmour extends Module {
     @Override
     public void onEnable() {
         delayTimer.setCooldown(0);
+        inInventory = false;
+    }
+
+    @Override
+    public void onDisable() {
+        delayTimer.setCooldown(0);
+        inInventory = false;
     }
 
     @Subscribe
     public void onTick(TickEvent e) {
-        if (mc.thePlayer == null || mc.theWorld == null) return;
-        
-        if (invOpen.isToggled() && !(mc.currentScreen instanceof GuiInventory)) {
-            return;
+        if (mc.thePlayer == null || mc.theWorld == null || mc.thePlayer.inventoryContainer == null) return;
+
+        if (mc.currentScreen instanceof GuiInventory) {
+            if (!inInventory) {
+                inInventory = true;
+                delayTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(firstDelay.getInputMin(), firstDelay.getInputMax() + 0.01));
+                delayTimer.start();
+            }
+        } else {
+            inInventory = false;
+            if (invOpen.isToggled() || mc.currentScreen != null) {
+                return;
+            }
         }
 
         if (!delayTimer.hasFinished()) {
@@ -64,10 +81,11 @@ public class AutoArmour extends Module {
         }
 
         for (int i = 9; i < 45; i++) {
-            ItemStack stack = mc.thePlayer.openContainer.getSlot(i).getStack();
+            ItemStack stack = mc.thePlayer.inventoryContainer.getSlot(i).getStack();
             if (stack != null && stack.getItem() instanceof ItemArmor) {
                 ItemArmor armor = (ItemArmor) stack.getItem();
                 int armorType = 3 - armor.armorType;
+                if (armorType < 0 || armorType >= 4) continue;
                 float armorValue = getArmorValue(armor, stack);
 
                 if (armorValue > bestArmorValues[armorType]) {
@@ -78,18 +96,24 @@ public class AutoArmour extends Module {
         }
 
         boolean acted = false;
-        
+        int windowId = mc.thePlayer.inventoryContainer.windowId;
+
         for (int i = 0; i < 4; i++) {
             if (bestArmorSlots[i] != -1) {
                 ItemStack equipped = mc.thePlayer.inventory.armorItemInSlot(i);
-                if (equipped != null && dropWorse.isToggled()) {
-                    // Drop equipped
-                    mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, 8 - i, 1, 4, mc.thePlayer);
+                if (equipped != null) {
+                    if (dropWorse.isToggled()) {
+                        // Drop equipped worse armor
+                        mc.playerController.windowClick(windowId, 8 - i, 1, 4, mc.thePlayer);
+                    } else {
+                        // Shift-click equipped worse armor back into inventory before equipping replacement
+                        mc.playerController.windowClick(windowId, 8 - i, 0, 1, mc.thePlayer);
+                    }
                     acted = true;
                     break;
                 } else {
-                    // Shift click new
-                    mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, bestArmorSlots[i], 0, 1, mc.thePlayer);
+                    // Shift click new armor into empty armor slot
+                    mc.playerController.windowClick(windowId, bestArmorSlots[i], 0, 1, mc.thePlayer);
                     acted = true;
                     break;
                 }
@@ -98,14 +122,15 @@ public class AutoArmour extends Module {
 
         if (!acted && dropWorse.isToggled()) {
             for (int i = 9; i < 45; i++) {
-                ItemStack stack = mc.thePlayer.openContainer.getSlot(i).getStack();
+                ItemStack stack = mc.thePlayer.inventoryContainer.getSlot(i).getStack();
                 if (stack != null && stack.getItem() instanceof ItemArmor) {
                     ItemArmor armor = (ItemArmor) stack.getItem();
                     int armorType = 3 - armor.armorType;
+                    if (armorType < 0 || armorType >= 4) continue;
                     float armorValue = getArmorValue(armor, stack);
-                    
+
                     if (armorValue < bestArmorValues[armorType]) {
-                        mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, i, 1, 4, mc.thePlayer);
+                        mc.playerController.windowClick(windowId, i, 1, 4, mc.thePlayer);
                         acted = true;
                         break;
                     }
@@ -119,10 +144,13 @@ public class AutoArmour extends Module {
         }
     }
 
-    private float getArmorValue(ItemArmor armor, ItemStack stack) {
+    public static float getArmorValue(ItemArmor armor, ItemStack stack) {
+        if (armor == null) return -1.0f;
         float value = armor.damageReduceAmount;
-        int protection = EnchantmentHelper.getEnchantmentLevel(Enchantment.protection.effectId, stack);
-        value += protection * 0.04f;
+        if (stack != null && Enchantment.protection != null) {
+            int protection = EnchantmentHelper.getEnchantmentLevel(Enchantment.protection.effectId, stack);
+            value += protection * 0.04f;
+        }
         return value;
     }
 }

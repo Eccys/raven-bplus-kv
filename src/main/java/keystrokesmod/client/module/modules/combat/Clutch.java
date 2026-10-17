@@ -24,6 +24,13 @@ public class Clutch extends Module {
         this.registerSetting(onlySword = new TickSetting("Only sword", true));
     }
 
+    @Override
+    public void onEnable() {
+        lastHealth = mc != null && mc.thePlayer != null ? mc.thePlayer.getHealth() : 20f;
+        lastHitTime = 0;
+        isBlocking = false;
+    }
+
     @Subscribe
     public void onLivingUpdate(ForgeEvent fe) {
         if (!(fe.getEvent() instanceof LivingEvent.LivingUpdateEvent)) return;
@@ -74,7 +81,9 @@ public class Clutch extends Module {
 
     private void releaseBlock() {
         if (isBlocking) {
-            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+            if (mc != null && mc.gameSettings != null) {
+                KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+            }
             isBlocking = false;
         }
     }

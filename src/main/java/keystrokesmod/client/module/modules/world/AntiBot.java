@@ -49,7 +49,13 @@ public class AntiBot extends Module {
 
     @Subscribe
     public void onTick(TickEvent ev) {
-        if (a.isToggled() && !newEnt.isEmpty()) {
+        if (!Utils.Player.isPlayerInGame() || !a.isToggled()) {
+            if (!newEnt.isEmpty()) {
+                newEnt.clear();
+            }
+            return;
+        }
+        if (!newEnt.isEmpty()) {
             long now = System.currentTimeMillis();
             newEnt.values().removeIf(e -> e < now - 4000L);
         }
@@ -57,49 +63,60 @@ public class AntiBot extends Module {
     }
 
     public static boolean bot(Entity en) {
-        if (!Utils.Player.isPlayerInGame() || mc.currentScreen != null)
+        if (en == null || !Utils.Player.isPlayerInGame() || mc.currentScreen != null)
             return false;
         if (Freecam.en != null && Freecam.en == en) {
             return true;
         }
-        Module antiBot = Raven.moduleManager.getModuleByClazz(AntiBot.class);
+        Module antiBot = Raven.moduleManager != null ? Raven.moduleManager.getModuleByClazz(AntiBot.class) : null;
         if ((antiBot != null && !antiBot.isEnabled()) || !Utils.Client.isHyp()) {
-        } else if ((a.isToggled() && !newEnt.isEmpty() && newEnt.containsKey(en)) || en.getName().startsWith("§c")) {
+            return false;
+        } else if ((a != null && a.isToggled() && !newEnt.isEmpty() && newEnt.containsKey(en))
+                || (en.getName() != null && en.getName().startsWith("§c"))) {
             return true;
-        } else if(en.isDead && dead.isToggled()) {
+        } else if (en.isDead && dead != null && dead.isToggled()) {
             return true;
         } else {
-            String n = en.getDisplayName().getUnformattedText();
-            if (n.contains("§")) {
-                return n.contains("[NPC] ");
-            }
-            if (n.isEmpty() && en.getName().isEmpty()) {
-                return true;
-            }
+            String n = en.getDisplayName() != null ? en.getDisplayName().getUnformattedText() : "";
+            return isHypixelBotName(n, en.getName());
+        }
+    }
 
-            if (n.length() == 10) {
-                int num = 0;
-                int let = 0;
-                char[] var4 = n.toCharArray();
+    public static boolean isHypixelBotName(String displayNameUnformatted, String name) {
+        String n = displayNameUnformatted != null ? displayNameUnformatted : "";
+        String rawName = name != null ? name : "";
+        if (rawName.startsWith("§c")) {
+            return true;
+        }
+        if (n.contains("§")) {
+            return n.contains("[NPC] ");
+        }
+        if (n.isEmpty() && rawName.isEmpty()) {
+            return true;
+        }
 
-                for (char c : var4) {
-                    if (Character.isLetter(c)) {
-                        if (Character.isUpperCase(c)) {
-                            return false;
-                        }
+        if (n.length() == 10) {
+            int num = 0;
+            int let = 0;
+            char[] var4 = n.toCharArray();
 
-                        ++let;
-                    } else {
-                        if (!Character.isDigit(c)) {
-                            return false;
-                        }
-
-                        ++num;
+            for (char c : var4) {
+                if (Character.isLetter(c)) {
+                    if (Character.isUpperCase(c)) {
+                        return false;
                     }
-                }
 
-                return num >= 2 && let >= 2;
+                    ++let;
+                } else {
+                    if (!Character.isDigit(c)) {
+                        return false;
+                    }
+
+                    ++num;
+                }
             }
+
+            return num >= 2 && let >= 2;
         }
         return false;
     }

@@ -36,10 +36,18 @@ public class ChestStealer extends Module {
         this.registerSetting(closeDelay = new DoubleSliderSetting("Close delay", 150, 250, 0, 1000, 1));
     }
 
+    @Override
+    public void onDisable() {
+        inChest = false;
+        closingChest = false;
+        sortedSlots = null;
+        chest = null;
+    }
+
     @Subscribe
     public void onRender2D(Render2DEvent e) {
         if (Utils.Player.isPlayerInChest()) {
-            if (!inChest) {
+            if (!inChest || mc.thePlayer.openContainer != chest) {
                 chest = (ContainerChest) mc.thePlayer.openContainer;
                 delayTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(firstDelay.getInputMin(),
                         firstDelay.getInputMax() + 0.01));
@@ -48,7 +56,7 @@ public class ChestStealer extends Module {
                 closingChest = false;
                 inChest = true;
             }
-            if (inChest && !sortedSlots.isEmpty()) {
+            if (inChest && sortedSlots != null && !sortedSlots.isEmpty()) {
                 if (delayTimer.hasFinished()) {
                     mc.playerController.windowClick(mc.thePlayer.openContainer.windowId, sortedSlots.get(0).s, 0, 1,
                             mc.thePlayer);
@@ -58,7 +66,7 @@ public class ChestStealer extends Module {
                     sortedSlots.remove(0);
                 }
             }
-            if (sortedSlots.isEmpty() && autoClose.isToggled()) {
+            if (sortedSlots != null && sortedSlots.isEmpty() && autoClose.isToggled()) {
                 if (!closingChest) {
                     closeTimer.setCooldown((long) ThreadLocalRandom.current().nextDouble(closeDelay.getInputMin(),
                             closeDelay.getInputMax() + 0.01));
@@ -109,14 +117,14 @@ public class ChestStealer extends Module {
         return out;
     }
 
-    public class Slot {
+    public static class Slot {
         final int x;
         final int y;
         final int s;
         boolean visited;
 
         public Slot(int s) {
-            this.x = (s + 1) % 10;
+            this.x = s % 9;
             this.y = s / 9;
             this.s = s;
         }

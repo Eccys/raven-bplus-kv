@@ -31,6 +31,7 @@ public class Freecam extends Module {
     @Override
     public void onEnable() {
         if (!Utils.Player.isPlayerInGame()) {
+            this.disable();
             return;
         }
         if (!mc.thePlayer.onGround) {
@@ -49,15 +50,21 @@ public class Freecam extends Module {
 
     public void onDisable() {
         if (en != null) {
-            mc.setRenderViewEntity(mc.thePlayer);
-            mc.thePlayer.rotationYaw = mc.thePlayer.rotationYawHead = this.sAng[0];
-            mc.thePlayer.rotationPitch = this.sAng[1];
-            mc.theWorld.removeEntity(en);
+            if (mc != null && mc.thePlayer != null) {
+                mc.setRenderViewEntity(mc.thePlayer);
+                mc.thePlayer.rotationYaw = mc.thePlayer.rotationYawHead = this.sAng[0];
+                mc.thePlayer.rotationPitch = this.sAng[1];
+            }
+            if (mc != null && mc.theWorld != null) {
+                mc.theWorld.removeEntity(en);
+            }
             en = null;
         }
 
         this.lcc = new int[] { Integer.MAX_VALUE, 0 };
-        int rg = 1;
+        if (mc == null || mc.thePlayer == null || mc.theWorld == null) {
+            return;
+        }
         int x = mc.thePlayer.chunkCoordX;
         int z = mc.thePlayer.chunkCoordZ;
 

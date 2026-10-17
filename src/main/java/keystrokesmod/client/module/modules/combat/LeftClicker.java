@@ -107,17 +107,20 @@ public class LeftClicker extends Module {
         this.leftk = 0L;
         this.leftl = 0L;
         this.leftm = 0;
+        this.lastClick = 0L;
+        this.leftHold = 0L;
         this.breakHeld = false;
         this.hitSelected = false;
+        this.target = null;
         autoClickerEnabled = false;
-        
-        // Reset mouse button states to prevent stuck clicking
+
+        // Reset left mouse button state to prevent stuck clicking
         Utils.Client.setMouseButtonState(0, false);
-        Utils.Client.setMouseButtonState(1, false);
-        
-        // Reset key bind states
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+
+        // Reset attack key bind state safely
+        if (mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+        }
     }
 
     @Subscribe
@@ -128,6 +131,9 @@ public class LeftClicker extends Module {
             TickEvent.RenderTickEvent ev = (TickEvent.RenderTickEvent) fe.getEvent();
 
             if ((ev.phase == TickEvent.Phase.END) || (clickTimings.getMode() != ClickEvent.Render))
+                return;
+
+            if (!Utils.Player.isPlayerInGame())
                 return;
 
             if ((!Utils.Client.currentScreenMinecraft()
@@ -145,6 +151,9 @@ public class LeftClicker extends Module {
     }
 
     private boolean shouldNotClick() {
+        if (!Utils.Player.isPlayerInGame())
+            return true;
+
         if (!Mouse.isButtonDown(0))
 			hitSelected = false;
 
@@ -158,6 +167,9 @@ public class LeftClicker extends Module {
 
     @Subscribe
     public void onTick(keystrokesmod.client.event.impl.TickEvent e) {
+        if (!Utils.Player.isPlayerInGame())
+            return;
+
         if ((clickTimings.getMode() != ClickEvent.Tick) || (!Utils.Client.currentScreenMinecraft() && !(Minecraft.getMinecraft().currentScreen instanceof GuiInventory)
                 && !(Minecraft.getMinecraft().currentScreen instanceof GuiChest) // to make it work in chests
 )
@@ -218,6 +230,7 @@ public class LeftClicker extends Module {
                     entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
                             - ((double) this.rand.nextFloat() * a * 0.45D));
                 }
+                entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
             }
 
             double speedLeft = 1.0
@@ -238,6 +251,8 @@ public class LeftClicker extends Module {
     }
 
     private void ravenClick() {
+        if (!Utils.Player.isPlayerInGame())
+            return;
 
         if ((mc.currentScreen != null) || !mc.inGameHasFocus) {
             doInventoryClick();
@@ -284,6 +299,7 @@ public class LeftClicker extends Module {
                 entityPlayer.rotationPitch = (float) ((double) entityPlayer.rotationPitch
                         - ((double) this.rand.nextFloat() * a * 0.45D));
             }
+            entityPlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, entityPlayer.rotationPitch));
         }
 
         // Only execute click logic if we have valid timing and mouse is held
@@ -344,6 +360,9 @@ public class LeftClicker extends Module {
     }
 
     private void inInvClick(GuiScreen guiScreen) {
+        if (guiScreen == null || mc.displayWidth <= 0 || mc.displayHeight <= 0)
+            return;
+
         int mouseInGUIPosX = (Mouse.getX() * guiScreen.width) / mc.displayWidth;
         int mouseInGUIPosY = guiScreen.height - ((Mouse.getY() * guiScreen.height) / mc.displayHeight) - 1;
 
@@ -369,9 +388,10 @@ public class LeftClicker extends Module {
                     }
                     return true;
                 }
-                if (breakHeld)
-					breakHeld = false;
             }
+        }
+        if (breakHeld) {
+            breakHeld = false;
         }
         return false;
     }

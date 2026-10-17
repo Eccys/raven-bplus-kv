@@ -31,6 +31,7 @@ public class FastBreak extends Module {
     private BlockPos currentBlock = null;
     private int breakStage = 0;
     private boolean isBreaking = false;
+    private boolean sendingPacket = false;
     
     public enum BreakMode {
         INSTANT,        // Instant block breaking
@@ -68,6 +69,7 @@ public class FastBreak extends Module {
         currentBlock = null;
         breakStage = 0;
         isBreaking = false;
+        sendingPacket = false;
     }
 
     @Subscribe
@@ -104,7 +106,7 @@ public class FastBreak extends Module {
 
     @Subscribe
     public void onPacketEvent(PacketEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (!Utils.Player.isPlayerInGame() || sendingPacket) return;
         
         if (event.getPacket() instanceof C07PacketPlayerDigging) {
             C07PacketPlayerDigging packet = (C07PacketPlayerDigging) event.getPacket();
@@ -114,11 +116,21 @@ public class FastBreak extends Module {
                 currentBlock = packet.getPosition();
                 isBreaking = true;
                 breakStage = 0;
-            } else if (packet.getStatus() == C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK) {
+            } else if (packet.getStatus() == C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK
+                    || packet.getStatus() == C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK) {
                 currentBlock = null;
                 isBreaking = false;
                 breakStage = 0;
             }
+        }
+    }
+
+    private void sendDiggingPacket(C07PacketPlayerDigging.Action action, BlockPos pos, EnumFacing facing) {
+        sendingPacket = true;
+        try {
+            mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(action, pos, facing));
+        } finally {
+            sendingPacket = false;
         }
     }
 
@@ -148,21 +160,9 @@ public class FastBreak extends Module {
         long currentTime = System.currentTimeMillis();
         
         if (currentTime - lastBreakTime >= packetDelay.getInput()) {
-            // Calculate damage based on break speed
-            float damage = (float) breakSpeed.getInput() * 0.1f;
-            
-            // Send damage packet
-            mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(
-                C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK,
-                currentBlock,
-                EnumFacing.DOWN
-            ));
-            
-            mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(
-                C07PacketPlayerDigging.Action.START_DESTROY_BLOCK,
-                currentBlock,
-                EnumFacing.DOWN
-            ));
+            // Send damage packets without re-entering onPacketEvent
+            sendDiggingPacket(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, currentBlock, EnumFacing.DOWN);
+            sendDiggingPacket(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, currentBlock, EnumFacing.DOWN);
             
             breakStage++;
             
@@ -202,19 +202,11 @@ public class FastBreak extends Module {
         long currentTime = System.currentTimeMillis();
         
         if (currentTime - lastBreakTime >= breakDelay.getInput()) {
-            // Switch between start and stop actions rapidly
+            // Switch between start and stop actions rapidly without cancelling our own break state
             if (breakStage % 2 == 0) {
-                mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(
-                    C07PacketPlayerDigging.Action.START_DESTROY_BLOCK,
-                    currentBlock,
-                    EnumFacing.DOWN
-                ));
+                sendDiggingPacket(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, currentBlock, EnumFacing.DOWN);
             } else {
-                mc.getNetHandler().addToSendQueue(new C07PacketPlayerDigging(
-                    C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK,
-                    currentBlock,
-                    EnumFacing.DOWN
-                ));
+                sendDiggingPacket(C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK, currentBlock, EnumFacing.DOWN);
             }
             
             breakStage++;
@@ -276,13 +268,14 @@ public class FastBreak extends Module {
 
     @Override
     public void onDisable() {
-        // Reset timer
-        Utils.Client.getTimer().timerSpeed = 1.0f;
+        // Reset timer safely
+        Utils.Client.resetTimer();
         
         // Reset breaking state
         isBreaking = false;
         currentBlock = null;
         breakStage = 0;
+        sendingPacket = false;
     }
 
     public boolean isBreakingBlock() {

@@ -45,7 +45,8 @@ public class BridgeAssist extends Module {
     }
 
     public void guiUpdate() {
-        assistModeDesc.setDesc(Utils.md + Utils.Modes.BridgeMode.values()[(int)(assistMode.getInput() - 1.0D)].name());
+        int idx = Math.max(0, Math.min(Utils.Modes.BridgeMode.values().length - 1, (int) (assistMode.getInput() - 1.0D)));
+        assistModeDesc.setDesc(Utils.md + Utils.Modes.BridgeMode.values()[idx].name());
     }
 
     @Override
@@ -53,6 +54,13 @@ public class BridgeAssist extends Module {
         this.waitingForAim = false;
         this.gliding = false;
         super.onEnable();
+    }
+
+    @Override
+    public void onDisable() {
+        this.waitingForAim = false;
+        this.gliding = false;
+        super.onDisable();
     }
 
     @Subscribe
@@ -142,7 +150,8 @@ public class BridgeAssist extends Module {
 
         float range = (float) assistRange.getInput();
 
-        switch (Utils.Modes.BridgeMode.values()[(int)(assistMode.getInput() - 1.0D)]) {
+        int modeIdx = Math.max(0, Math.min(Utils.Modes.BridgeMode.values().length - 1, (int) (assistMode.getInput() - 1.0D)));
+        switch (Utils.Modes.BridgeMode.values()[modeIdx]) {
             case GODBRIDGE:
                 if (godbridgePos[0] >= (pitch - range) && godbridgePos[0] <= (pitch + range)) {
                     for (int k = 1; k < godbridgePos.length; k++) {
@@ -153,7 +162,7 @@ public class BridgeAssist extends Module {
                         }
                     }
                 }
-
+                break;
 
             case MOONWALK:
                 if (moonwalkPos[0] >= (pitch - range) && moonwalkPos[0] <= (pitch + range)) {
@@ -165,6 +174,7 @@ public class BridgeAssist extends Module {
                         }
                     }
                 }
+                break;
 
             case BREEZILY:
                 if (breezilyPos[0] >= (pitch - range) && breezilyPos[0] <= (pitch + range)) {
@@ -176,6 +186,7 @@ public class BridgeAssist extends Module {
                         }
                     }
                 }
+                break;
 
             case NORMAL:
                 if (normalPos[0] >= (pitch - range) && normalPos[0] <= (pitch + range)) {
@@ -187,14 +198,15 @@ public class BridgeAssist extends Module {
                         }
                     }
                 }
+                break;
         }
         this.waitingForAim = false;
     }
 
     public void aimAt(float pitch, float yaw, float fuckedYaw, float fuckedPitch){
-       if(setLook.isToggled()) {
-               mc.thePlayer.rotationPitch = pitch + ((int)fuckedPitch/360) * 360;
-               mc.thePlayer.rotationYaw = yaw;
+        if (setLook.isToggled()) {
+            mc.thePlayer.rotationPitch = Math.max(-90.0F, Math.min(90.0F, pitch));
+            mc.thePlayer.rotationYaw = yaw + ((int) fuckedYaw / 360) * 360;
         }
     }
 }

@@ -82,6 +82,11 @@ public class AntiAFK extends Module {
         releaseCd.start();
     }
 
+    @Override
+    public void onDisable() {
+        releaseAction();
+    }
+
     private void pressKey(int key) {
         KeyBinding.setKeyBindState(key, true);
     }
@@ -89,20 +94,22 @@ public class AntiAFK extends Module {
     private void releaseAction() {
         if (!actionHeld) return;
 
-        switch (currentAction) {
-            case Jump:
-                KeyBinding.setKeyBindState(mc.gameSettings.keyBindJump.getKeyCode(), false);
-                break;
-            case Forward:
-                KeyBinding.setKeyBindState(mc.gameSettings.keyBindForward.getKeyCode(), false);
-                break;
-            case Backward:
-                KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), false);
-                break;
-            case Strafe:
-                KeyBinding.setKeyBindState(mc.gameSettings.keyBindLeft.getKeyCode(), false);
-                KeyBinding.setKeyBindState(mc.gameSettings.keyBindRight.getKeyCode(), false);
-                break;
+        if (mc != null && mc.gameSettings != null && currentAction != null) {
+            switch (currentAction) {
+                case Jump:
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindJump.getKeyCode(), false);
+                    break;
+                case Forward:
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindForward.getKeyCode(), false);
+                    break;
+                case Backward:
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), false);
+                    break;
+                case Strafe:
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindLeft.getKeyCode(), false);
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindRight.getKeyCode(), false);
+                    break;
+            }
         }
 
         actionHeld = false;

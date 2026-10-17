@@ -28,6 +28,10 @@ public class TargetStrafe extends Module {
         EntityLivingBase target = getTarget();
         if (target == null) return;
 
+        if (mc.thePlayer.isCollidedHorizontally) {
+            direction = -direction;
+        }
+
         double dist = mc.thePlayer.getDistanceToEntity(target);
 
         if (dist > distance.getInput() + 0.5) {
@@ -43,6 +47,7 @@ public class TargetStrafe extends Module {
     }
 
     private EntityLivingBase getTarget() {
+        if (Raven.moduleManager == null) return null;
         KillAura ka = (KillAura) Raven.moduleManager.getModuleByClazz(KillAura.class);
         if (ka != null && ka.isEnabled() && ka.target != null && ka.target.isEntityAlive())
             return ka.target;
@@ -50,8 +55,15 @@ public class TargetStrafe extends Module {
     }
 
     private float getYawToTarget(EntityLivingBase target) {
-        double dx = target.posX - mc.thePlayer.posX;
-        double dz = target.posZ - mc.thePlayer.posZ;
+        return calculateYawToTarget(mc.thePlayer.posX, mc.thePlayer.posZ, target.posX, target.posZ);
+    }
+
+    public static float calculateYawToTarget(double fromX, double fromZ, double toX, double toZ) {
+        double dx = toX - fromX;
+        double dz = toZ - fromZ;
+        if (dx == 0.0D && dz == 0.0D) {
+            return 0.0f;
+        }
         return (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0f;
     }
 }
