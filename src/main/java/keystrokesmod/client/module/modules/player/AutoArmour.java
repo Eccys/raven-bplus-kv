@@ -144,6 +144,20 @@ public class AutoArmour extends Module {
         }
     }
 
+    public static boolean hasEmptyInventorySlot(ItemStack[] mainInventory) {
+        if (mainInventory == null) return false;
+        for (ItemStack stack : mainInventory) {
+            if (stack == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int getHotbarSwapButton(int containerSlot) {
+        return (containerSlot >= 36 && containerSlot < 45) ? (containerSlot - 36) : -1;
+    }
+
     public static float getArmorValue(ItemArmor armor, ItemStack stack) {
         if (armor == null) return -1.0f;
         float value = armor.damageReduceAmount;

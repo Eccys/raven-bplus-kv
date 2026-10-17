@@ -36,7 +36,7 @@ public class Timer extends Module {
                 return;
             }
 
-            Utils.Client.getTimer().timerSpeed = (float) a.getInput();
+            net.minecraft.util.Timer t = Utils.Client.getTimer(); if (t != null) t.timerSpeed = (float) a.getInput();
         } else {
             Utils.Client.resetTimer();
         }

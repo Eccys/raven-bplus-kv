@@ -5,6 +5,7 @@ import keystrokesmod.client.event.impl.ForgeEvent;
 import keystrokesmod.client.event.impl.Render2DEvent;
 import keystrokesmod.client.module.Module;
 import keystrokesmod.client.module.modules.combat.WTap.EventType;
+import keystrokesmod.client.module.setting.Setting;
 import keystrokesmod.client.module.setting.impl.ComboSetting;
 import keystrokesmod.client.module.setting.impl.DoubleSliderSetting;
 import keystrokesmod.client.module.setting.impl.SliderSetting;

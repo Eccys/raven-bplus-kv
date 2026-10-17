@@ -1,8 +1,15 @@
 package keystrokesmod.client.clickgui.kv;
 
+import keystrokesmod.client.module.setting.Setting;
+
 public abstract class KvComponent {
 
     protected int x, y, width, height;
+    protected Setting setting;
+
+    public Setting getSetting() {
+        return setting;
+    }
 
     public void draw(int mouseX, int mouseY) {
 

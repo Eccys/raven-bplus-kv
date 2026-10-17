@@ -152,8 +152,14 @@ public class KvModuleComponent extends KvComponent{
     		if ((x > settingsBoxX) && (x < (settingsBoxX + halfSettingsBoxWidth)) && (y > bindBoxY) && (y < (bindBoxY + bindBoxHeight)))
     			module.toggle();
     		bindComponent.mouseDown(x, y, mouseButton);
-    		for(KvComponent component : settings)
-				component.mouseDown(x, y, mouseButton);
+    		for (KvComponent component : settings) {
+                if (component.mouseDown(x, y, mouseButton)) {
+                    if (component.getSetting() != null) {
+                        module.guiButtonToggled(component.getSetting());
+                    }
+                    module.guiUpdate();
+                }
+            }
         }
 
 		else if ((x > settingX) && (x < (settingX + settingWidth)) && (y > settingY) && (y < (settingY + settingHeight)))

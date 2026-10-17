@@ -28,6 +28,7 @@ public class SliderComponent extends SettingComponent {
         if(mouseDown) {
             float p = (mouseX - x) / (float) (width);
             setting.setValue((float) ((p * (setting.getMax())) + (setting.getMin() * (1 - p))));
+            moduleComponent.mod.guiUpdate();
         }
 
         //name + input
@@ -50,8 +51,10 @@ public class SliderComponent extends SettingComponent {
     }
 
     @Override
-    public void clicked(int button, int x, int y) {
-        mouseDown = true;
+    public void clicked(int x, int y, int button) {
+        if (button == 0) {
+            mouseDown = true;
+        }
     }
 
     @Override
