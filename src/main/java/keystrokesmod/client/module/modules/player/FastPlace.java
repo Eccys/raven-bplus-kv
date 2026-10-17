@@ -48,62 +48,27 @@ public class FastPlace extends Module {
     @Subscribe
     public void onTick(TickEvent event) {
         if (Utils.Player.isPlayerInGame() && mc.inGameHasFocus && rightClickDelayTimerField != null) {
-            if (blockOnly.isToggled()) {
-                ItemStack item = mc.thePlayer.getHeldItem();
-                if (item != null && (item.getItem() instanceof ItemBlock)) {
-                    try {
-                        int c = (int) delaySlider.getInput();
-                        if (c == 0) {
-                            rightClickDelayTimerField.set(mc, 0);
-                        } else {
-                            if (c == 4) {
-                                return;
-                            }
+            ItemStack item = mc.thePlayer.getHeldItem();
+            boolean isProjectile = item != null && (item.getItem() instanceof ItemSnowball || item.getItem() instanceof ItemEgg);
+            if (isProjectile && projSeparate.isToggled()) {
+                applyDelay((int) projSlider.getInput());
+            } else if (!blockOnly.isToggled() || (item != null && item.getItem() instanceof ItemBlock)) {
+                applyDelay((int) delaySlider.getInput());
+            }
+        }
+    }
 
-                            int d = rightClickDelayTimerField.getInt(mc);
-                            if (d == 4) {
-                                rightClickDelayTimerField.set(mc, c);
-                            }
-                        }
-                    } catch (IllegalAccessException | IndexOutOfBoundsException ignored) {
-                    }
-                } else if (item != null && (item.getItem() instanceof ItemSnowball || item.getItem() instanceof ItemEgg)
-                        && projSeparate.isToggled()) {
-                    try {
-                        int c = (int) projSlider.getInput();
-                        if (c == 0) {
-                            rightClickDelayTimerField.set(mc, 0);
-                        } else {
-                            if (c == 4) {
-                                return;
-                            }
-
-                            int d = rightClickDelayTimerField.getInt(mc);
-                            if (d == 4) {
-                                rightClickDelayTimerField.set(mc, c);
-                            }
-                        }
-                    } catch (IllegalAccessException | IndexOutOfBoundsException ignored) {
-                    }
-                }
-            } else {
-                try {
-                    int c = (int) delaySlider.getInput();
-                    if (c == 0) {
-                        rightClickDelayTimerField.set(mc, 0);
-                    } else {
-                        if (c == 4) {
-                            return;
-                        }
-
-                        int d = rightClickDelayTimerField.getInt(mc);
-                        if (d == 4) {
-                            rightClickDelayTimerField.set(mc, c);
-                        }
-                    }
-                } catch (IllegalAccessException | IndexOutOfBoundsException ignored) {
+    private void applyDelay(int c) {
+        try {
+            if (c == 0) {
+                rightClickDelayTimerField.set(mc, 0);
+            } else if (c != 4) {
+                int d = rightClickDelayTimerField.getInt(mc);
+                if (d == 4) {
+                    rightClickDelayTimerField.set(mc, c);
                 }
             }
+        } catch (IllegalAccessException | IndexOutOfBoundsException ignored) {
         }
     }
 }

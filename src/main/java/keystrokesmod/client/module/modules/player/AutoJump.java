@@ -38,6 +38,8 @@ public class AutoJump extends Module {
     }
 
     private void ju(boolean ju) {
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindJump.getKeyCode(), ju);
+        if (mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindJump.getKeyCode(), ju);
+        }
     }
 }

@@ -530,4 +530,142 @@ public class RavenCoreTest {
         assertEquals(0, keystrokesmod.client.utils.MouseManager.getLeftClickCounter());
         assertEquals(0, keystrokesmod.client.utils.MouseManager.getRightClickCounter());
     }
+
+    @Test
+    public void testChestStealerSlotGridAndNearestNeighborSort() {
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot s0 =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(0);
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot s8 =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(8);
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot s9 =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(9);
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot s18 =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(18);
+
+        assertEquals(1.0, s0.getDistance(s9), 1e-6);
+        assertEquals(2.0, s0.getDistance(s18), 1e-6);
+        assertEquals(8.0, s0.getDistance(s8), 1e-6);
+
+        assertNull(keystrokesmod.client.module.modules.player.ChestStealer.sort(null));
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot[] empty =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot[0];
+        assertEquals(0, keystrokesmod.client.module.modules.player.ChestStealer.sort(empty).length);
+
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot[] input =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot[]{s0, s8, s9, s18};
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot[] sorted =
+                keystrokesmod.client.module.modules.player.ChestStealer.sort(input);
+        assertEquals(4, sorted.length);
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (keystrokesmod.client.module.modules.player.ChestStealer.Slot slot : sorted) {
+            assertNotNull(slot);
+            seen.add(updateSlotIndex(slot));
+        }
+        assertEquals(4, seen.size());
+    }
+
+    private static int updateSlotIndex(keystrokesmod.client.module.modules.player.ChestStealer.Slot slot) {
+        keystrokesmod.client.module.modules.player.ChestStealer.Slot origin =
+                new keystrokesmod.client.module.modules.player.ChestStealer.Slot(0);
+        return (int) Math.round(slot.getDistance(origin));
+    }
+
+    @Test
+    public void testNoFallCalculateFallDamageAndArmorReduction() {
+        assertEquals(0.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(10.0, true, 0), 1e-6);
+        assertEquals(0.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(3.0, false, 0), 1e-6);
+        assertEquals(0.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(1.5, false, 0), 1e-6);
+
+        // 13 blocks fall unarmored -> (13 - 3) * 0.5 = 5.0
+        assertEquals(5.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(13.0, false, 0), 1e-6);
+        // 10 armor points (40% reduction) -> 5.0 * 0.6 = 3.0
+        assertEquals(3.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(13.0, false, 10), 1e-6);
+        // 20 armor points (80% reduction) -> 5.0 * 0.2 = 1.0
+        assertEquals(1.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(13.0, false, 20), 1e-6);
+        // Armor points > 20 are clamped so damage never becomes negative
+        assertEquals(1.0, keystrokesmod.client.module.modules.player.NoFall.calculateFallDamage(13.0, false, 30), 1e-6);
+    }
+
+    @Test
+    public void testAntiBotHypixelBotNameHeuristics() {
+        assertTrue(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("Player", "§cWatchdogBot"));
+        assertTrue(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("§7[NPC] Shopkeeper", "Shopkeeper"));
+        assertFalse(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("§a[VIP] RealPlayer", "RealPlayer"));
+        assertTrue(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("", ""));
+        assertTrue(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName(null, null));
+
+        // 10-char lowercase alphanumeric with >=2 letters and >=2 digits
+        assertTrue(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("ab12cd34ef", "ab12cd34ef"));
+        // Contains uppercase letter -> not matched by 10-char lowercase bot pattern
+        assertFalse(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("Ab12cd34ef", "Ab12cd34ef"));
+        // Contains underscore -> not matched by 10-char alphanumeric bot pattern
+        assertFalse(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("ab12_d34ef", "ab12_d34ef"));
+        // Only 1 digit -> false
+        assertFalse(keystrokesmod.client.module.modules.world.AntiBot.isHypixelBotName("abcdefghi1", "abcdefghi1"));
+    }
+
+    @Test
+    public void testAutoArmourGetArmorValueNullSafety() {
+        assertEquals(-1.0f, keystrokesmod.client.module.modules.player.AutoArmour.getArmorValue(null, null), 1e-6f);
+    }
+
+    @Test
+    public void testTargetStrafeCalculateYawToTarget() {
+        // Same position must not return NaN
+        assertEquals(0.0f, keystrokesmod.client.module.modules.combat.TargetStrafe.calculateYawToTarget(5.0, 5.0, 5.0, 5.0), 1e-5f);
+        // Target due South (+Z): atan2(10, 0) = 90 deg -> 90 - 90 = 0 deg
+        assertEquals(0.0f, keystrokesmod.client.module.modules.combat.TargetStrafe.calculateYawToTarget(0.0, 0.0, 0.0, 10.0), 1e-4f);
+        // Target due East (+X): atan2(0, 10) = 0 deg -> 0 - 90 = -90 deg
+        assertEquals(-90.0f, keystrokesmod.client.module.modules.combat.TargetStrafe.calculateYawToTarget(0.0, 0.0, 10.0, 0.0), 1e-4f);
+        // Target due West (-X): atan2(0, -10) = 180 deg -> 180 - 90 = 90 deg
+        assertEquals(90.0f, keystrokesmod.client.module.modules.combat.TargetStrafe.calculateYawToTarget(0.0, 0.0, -10.0, 0.0), 1e-4f);
+        // Target due North (-Z): atan2(-10, 0) = -90 deg -> -90 - 90 = -180 deg
+        assertEquals(-180.0f, keystrokesmod.client.module.modules.combat.TargetStrafe.calculateYawToTarget(0.0, 0.0, 0.0, -10.0), 1e-4f);
+    }
+
+    @Test
+    public void testUtilsJavaRoundAndRandomIntBounds() {
+        assertEquals(3.14, keystrokesmod.client.utils.Utils.Java.round(3.14159, 2), 1e-6);
+        assertEquals(3.0, keystrokesmod.client.utils.Utils.Java.round(3.14159, 0), 1e-6);
+        assertEquals(3.0, keystrokesmod.client.utils.Utils.Java.round(3.14159, -1), 1e-6);
+
+        for (int i = 0; i < 25; i++) {
+            int r = keystrokesmod.client.utils.Utils.Java.randomInt(5.0, 10.0);
+            assertTrue(r >= 5 && r <= 10);
+        }
+    }
+
+    @Test
+    public void testPlayerAndMovementModulesHeadlessDisableSafety() {
+        keystrokesmod.client.module.modules.player.Freecam freecam =
+                new keystrokesmod.client.module.modules.player.Freecam();
+        freecam.onDisable();
+        assertNull(keystrokesmod.client.module.modules.player.Freecam.en);
+
+        keystrokesmod.client.module.modules.player.SafeWalk safeWalk =
+                new keystrokesmod.client.module.modules.player.SafeWalk();
+        safeWalk.guiUpdate();
+        safeWalk.onDisable();
+
+        keystrokesmod.client.module.modules.player.NoFall noFall =
+                new keystrokesmod.client.module.modules.player.NoFall();
+        noFall.onDisable();
+
+        keystrokesmod.client.module.modules.player.ChestStealer chestStealer =
+                new keystrokesmod.client.module.modules.player.ChestStealer();
+        chestStealer.onDisable();
+
+        keystrokesmod.client.module.modules.player.AutoArmour autoArmour =
+                new keystrokesmod.client.module.modules.player.AutoArmour();
+        autoArmour.onEnable();
+        autoArmour.onDisable();
+
+        keystrokesmod.client.module.modules.player.AntiAFK antiAFK =
+                new keystrokesmod.client.module.modules.player.AntiAFK();
+        antiAFK.onDisable();
+
+        keystrokesmod.client.module.modules.player.Parkour parkour =
+                new keystrokesmod.client.module.modules.player.Parkour();
+        parkour.onDisable();
+    }
 }

@@ -58,6 +58,9 @@ public class AutoPlace extends Module {
 
     @Subscribe
     public void onTick(TickEvent e) {
+        if (!Utils.Player.isPlayerInGame()) {
+            return;
+        }
         Module fastPlace = Raven.moduleManager.getModuleByClazz(FastPlace.class);
         if (a.isToggled() && Mouse.isButtonDown(1) && !mc.thePlayer.capabilities.isFlying && fastPlace != null
                 && !fastPlace.isEnabled()) {

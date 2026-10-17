@@ -56,6 +56,14 @@ public class NoFall extends Module {
         lastY = mc.thePlayer != null ? mc.thePlayer.posY : 0;
     }
 
+    @Override
+    public void onDisable() {
+        ticks = 0;
+        dist = 0;
+        spoofing = false;
+        lastPacketTime = 0;
+    }
+
     @Subscribe
     public void onTick(TickEvent e) {
         if (!Utils.Player.isPlayerInGame()) return;
@@ -104,13 +112,13 @@ public class NoFall extends Module {
 
     @Subscribe
     public void onPacketEvent(PacketEvent event) {
-        if (!Utils.Player.isPlayerInGame()) return;
+        if (!Utils.Player.isPlayerInGame() || !event.isOutgoing()) return;
         
         if (event.getPacket() instanceof C03PacketPlayer && (Mode) mode.getMode() == Mode.Packet) {
             C03PacketPlayer packet = (C03PacketPlayer) event.getPacket();
             
-            // Cancel the packet and send a ground packet instead
-            if (shouldModifyPacket()) {
+            // Cancel non-ground packets and send a ground packet instead without recursing on our own ground packet
+            if (!packet.isOnGround() && shouldModifyPacket()) {
                 event.setCancelled(true);
                 sendGroundPacket();
             }
@@ -309,20 +317,18 @@ public class NoFall extends Module {
     }
 
     private double predictFallDamage() {
-        if (mc.thePlayer.onGround) return 0;
-        
-        double fallDistance = mc.thePlayer.fallDistance;
-        
-        // Basic damage calculation (simplified)
-        if (fallDistance <= 3.0) return 0;
-        
+        if (mc.thePlayer == null) return 0;
+        return calculateFallDamage(mc.thePlayer.fallDistance, mc.thePlayer.onGround, mc.thePlayer.getTotalArmorValue());
+    }
+
+    public static double calculateFallDamage(double fallDistance, boolean onGround, int totalArmorValue) {
+        if (onGround || fallDistance <= 3.0) return 0;
+
         double damage = (fallDistance - 3.0) * 0.5;
-        
-        // Apply armor and potion effects (simplified)
-        if (mc.thePlayer.getTotalArmorValue() > 0) {
-            damage *= (1.0 - mc.thePlayer.getTotalArmorValue() * 0.04);
+        if (totalArmorValue > 0) {
+            damage *= (1.0 - Math.min(20, totalArmorValue) * 0.04);
         }
-        
+
         return Math.max(0, damage);
     }
 

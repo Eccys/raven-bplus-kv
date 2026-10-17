@@ -74,7 +74,9 @@ public class Velocity extends Module {
 
         if (fe.getEvent() instanceof LivingUpdateEvent) {
 
-            if (Utils.Player.isPlayerInGame() && mc.thePlayer.maxHurtTime > 0
+            LivingUpdateEvent ev = (LivingUpdateEvent) fe.getEvent();
+
+            if (Utils.Player.isPlayerInGame() && ev.entityLiving == mc.thePlayer && mc.thePlayer.maxHurtTime > 0
 
                     && mc.thePlayer.hurtTime == mc.thePlayer.maxHurtTime) {
 

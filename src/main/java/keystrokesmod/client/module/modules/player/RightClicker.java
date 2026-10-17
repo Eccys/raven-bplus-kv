@@ -95,6 +95,13 @@ public class RightClicker extends Module {
         this.allowedClick = false;
         this.righti = 0L;
         this.rightj = 0L;
+        this.rightk = 0L;
+        this.rightl = 0L;
+        this.rightm = 0.0D;
+        this.rightn = false;
+        this.lastClick = 0L;
+        this.rightHold = 0L;
+        this.rightClickWaitStartTime = 0.0D;
         this.rightDown = false;
         Utils.Client.setMouseButtonState(1, false);
         if (mc != null && mc.gameSettings != null) {
@@ -365,6 +372,9 @@ public class RightClicker extends Module {
     }
 
     private void inInvClick(GuiScreen guiScreen) {
+        if (guiScreen == null || mc.displayWidth <= 0 || mc.displayHeight <= 0)
+            return;
+
         int mouseInGUIPosX = Mouse.getX() * guiScreen.width / mc.displayWidth;
         int mouseInGUIPosY = guiScreen.height - Mouse.getY() * guiScreen.height / mc.displayHeight - 1;
 

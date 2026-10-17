@@ -21,7 +21,6 @@ public class Nametags extends Module {
     public static TickSetting c;
     public static TickSetting d;
     public static TickSetting rm;
-    public static TickSetting e;
 
     public Nametags() {
         super("Nametags", ModuleCategory.render);
@@ -35,6 +34,9 @@ public class Nametags extends Module {
     @Subscribe
     public void onForgeEvent(ForgeEvent fe) {
         if (fe.getEvent() instanceof Pre) {
+            if (!Utils.Player.isPlayerInGame()) {
+                return;
+            }
             Pre e = (Pre) fe.getEvent();
 
             if (rm.isToggled()) {
@@ -46,14 +48,15 @@ public class Nametags extends Module {
                         return;
                     }
 
-                    if (AntiBot.bot(en) || en.getDisplayNameString().isEmpty()) {
+                    if (AntiBot.bot(en) || en.getDisplayName() == null || en.getDisplayNameString().isEmpty()) {
                         return;
                     }
 
                     e.setCanceled(true);
                     String str = en.getDisplayName().getFormattedText();
                     if (c.isToggled()) {
-                        double r = en.getHealth() / en.getMaxHealth();
+                        float maxHealth = en.getMaxHealth();
+                        double r = maxHealth > 0.0F ? (double) en.getHealth() / (double) maxHealth : 0.0D;
                         String h = (r < 0.3D ? "§c" : (r < 0.5D ? "§6" : (r < 0.7D ? "§e" : "§a")))
                                 + Utils.Java.round(en.getHealth(), 1);
                         str = str + " " + h;

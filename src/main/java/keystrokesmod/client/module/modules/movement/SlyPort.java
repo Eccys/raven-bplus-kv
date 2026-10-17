@@ -32,9 +32,11 @@ public class SlyPort extends Module {
 
     @Override
     public void onEnable() {
-        Entity en = this.ge();
-        if (en != null)
-            this.tp(en);
+        if (Utils.Player.isPlayerInGame()) {
+            Entity en = this.ge();
+            if (en != null)
+                this.tp(en);
+        }
 
         this.disable();
     }

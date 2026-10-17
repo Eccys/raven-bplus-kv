@@ -28,6 +28,12 @@ public class AutoPot extends Module {
         this.registerSetting(healOnly = new TickSetting("Heal only", true));
     }
 
+    @Override
+    public void onDisable() {
+        shouldLookDown = false;
+        lookDownUntil = 0;
+    }
+
     @Subscribe
     public void onTick(TickEvent e) {
         if (!Utils.Player.isPlayerInGame() || mc.thePlayer == null) return;
@@ -37,6 +43,7 @@ public class AutoPot extends Module {
 
         float health = mc.thePlayer.getHealth();
         float maxHealth = mc.thePlayer.getMaxHealth();
+        if (maxHealth <= 0.0f) return;
         float healthPct = (health / maxHealth) * 100.0f;
 
         if (healthPct > healthThreshold.getInput()) return;
@@ -73,6 +80,7 @@ public class AutoPot extends Module {
         for (int i = 0; i < 9; i++) {
             ItemStack stack = mc.thePlayer.inventory.getStackInSlot(i);
             if (stack == null || !(stack.getItem() instanceof ItemPotion)) continue;
+            if (!ItemPotion.isSplash(stack.getMetadata())) continue;
             ItemPotion pot = (ItemPotion) stack.getItem();
             if (healOnly.isToggled()) {
                 List<PotionEffect> effects = pot.getEffects(stack);

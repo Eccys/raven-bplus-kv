@@ -53,7 +53,7 @@ public class SafeWalk extends Module {
     }
 
     public void onDisable() {
-        if (doShift.isToggled() && Utils.Player.playerOverAir()) {
+        if (isShifting || doShift.isToggled()) {
             this.setShift(false);
         }
 
@@ -62,7 +62,8 @@ public class SafeWalk extends Module {
     }
 
     public void guiUpdate() {
-        blockShowModeDesc.setDesc(Utils.md + BlockAmountInfo.values()[(int) blockShowMode.getInput() - 1]);
+        int idx = Math.max(0, Math.min(BlockAmountInfo.values().length - 1, (int) blockShowMode.getInput() - 1));
+        blockShowModeDesc.setDesc(Utils.md + BlockAmountInfo.values()[idx]);
     }
 
     @Subscribe
@@ -83,6 +84,9 @@ public class SafeWalk extends Module {
                     shouldBridge = false;
                     if (Keyboard.isKeyDown(mc.gameSettings.keyBindSneak.getKeyCode())) {
                         setShift(true);
+                    } else if (isShifting) {
+                        isShifting = false;
+                        setShift(false);
                     }
                     return;
                 }
@@ -91,6 +95,10 @@ public class SafeWalk extends Module {
             if (onHold.isToggled()) {
                 if (!Keyboard.isKeyDown(mc.gameSettings.keyBindSneak.getKeyCode())) {
                     shouldBridge = false;
+                    if (isShifting) {
+                        isShifting = false;
+                        setShift(false);
+                    }
                     return;
                 }
             }
@@ -107,9 +115,13 @@ public class SafeWalk extends Module {
                 }
             }
 
-            if(shawtyMoment.isToggled()) {
-                if(mc.thePlayer.movementInput.moveForward >= 0) {
+            if (shawtyMoment.isToggled()) {
+                if (mc.thePlayer.movementInput.moveForward >= 0) {
                     shouldBridge = false;
+                    if (isShifting) {
+                        isShifting = false;
+                        this.setShift(!Keyboard.isKeyDown(mc.gameSettings.keyBindSneak.getKeyCode()) ? false : true);
+                    }
                     return;
                 }
             }
@@ -164,6 +176,10 @@ public class SafeWalk extends Module {
                 isShifting = false;
                 this.setShift(false);
             }
+        } else if (isShifting) {
+            isShifting = false;
+            shouldBridge = false;
+            this.setShift(Keyboard.isKeyDown(mc.gameSettings.keyBindSneak.getKeyCode()));
         }
     }
 
@@ -176,8 +192,8 @@ public class SafeWalk extends Module {
                 ScaledResolution res = new ScaledResolution(mc);
 
                 int totalBlocks = 0;
-                if (BlockAmountInfo.values()[(int) blockShowMode.getInput()
-                        - 1] == BlockAmountInfo.BLOCKS_IN_CURRENT_STACK) {
+                int modeIdx = Math.max(0, Math.min(BlockAmountInfo.values().length - 1, (int) blockShowMode.getInput() - 1));
+                if (BlockAmountInfo.values()[modeIdx] == BlockAmountInfo.BLOCKS_IN_CURRENT_STACK) {
                     totalBlocks = Utils.Player.getBlockAmountInCurrentStack(mc.thePlayer.inventory.currentItem);
                 } else {
                     for (int slot = 0; slot < 36; slot++) {
@@ -216,7 +232,9 @@ public class SafeWalk extends Module {
     }
 
     private void setShift(boolean sh) {
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), sh);
+        if (mc != null && mc.gameSettings != null) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), sh);
+        }
     }
 
     public enum BlockAmountInfo {
